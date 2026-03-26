@@ -88,6 +88,23 @@
       padding: 24px;
     }
 
+    /* Tooltip */
+    .tip { position: relative; cursor: help; border-bottom: 1px dashed var(--gray-300); display: inline-block; }
+    .tip::after {
+      content: attr(data-tip);
+      position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+      background: var(--gray-900); color: #fff;
+      padding: 6px 10px; border-radius: 6px;
+      font-size: 12px; white-space: nowrap; line-height: 1.5;
+      opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 200;
+    }
+    .tip::before {
+      content: ''; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+      border: 5px solid transparent; border-top-color: var(--gray-900);
+      opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 200;
+    }
+    .tip:hover::after, .tip:hover::before { opacity: 1; }
+
     /* Cards */
     .card {
       background: #fff;
@@ -194,6 +211,49 @@
       margin-left: 2px;
     }
 
+    /* KPI Cards */
+    .kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .kpi-card { border-radius: 10px; padding: 12px 14px; }
+    .kpi-card .kpi-label { font-size: 11px; font-weight: 600; color: var(--gray-500); margin-bottom: 6px; }
+    .kpi-card .kpi-value { font-size: 20px; font-weight: 800; }
+    .kpi-card .kpi-unit { font-size: 12px; color: var(--gray-500); margin-left: 2px; font-weight: 500; }
+    .kpi-primary { background: var(--primary-light); }
+    .kpi-primary .kpi-value { color: var(--primary); }
+    .kpi-green { background: var(--green-light); }
+    .kpi-green .kpi-value { color: var(--green); }
+    .kpi-blue { background: var(--blue-light); }
+    .kpi-blue .kpi-value { color: var(--blue); }
+
+    /* Waterfall P&L */
+    .wf-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); padding: 10px 0 4px; }
+    .wf-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; border-radius: 8px; margin-bottom: 3px; }
+    .wf-main { background: var(--primary-light); }
+    .wf-sub { background: var(--gray-100); }
+    .wf-profit { background: var(--green-light); }
+    .wf-label { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+    .wf-amount { font-size: 14px; font-weight: 700; color: var(--gray-900); }
+    .wf-main .wf-label, .wf-main .wf-amount { color: var(--primary); }
+    .wf-profit .wf-label, .wf-profit .wf-amount { color: var(--green); }
+    .wf-deduct { display: flex; justify-content: space-between; padding: 5px 12px 5px 22px; font-size: 12px; color: var(--gray-500); border-left: 2px solid var(--gray-200); margin: 0 0 2px 10px; }
+    .wf-minus { color: var(--red); font-weight: 600; }
+    .wf-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .wf-split-item { border-radius: 8px; padding: 10px 12px; }
+    .wf-split-lk { background: var(--green-light); }
+    .wf-split-partner { background: var(--blue-light); }
+    .wf-split-item .sp-label { font-size: 11px; color: var(--gray-500); font-weight: 600; margin-bottom: 2px; }
+    .wf-split-item .sp-sublabel { font-size: 10px; color: var(--gray-400); margin-bottom: 6px; }
+    .wf-split-item .sp-value { font-size: 18px; font-weight: 800; }
+    .wf-split-lk .sp-value { color: var(--green); }
+    .wf-split-partner .sp-value { color: var(--blue); }
+    .wf-split-item .sp-unit { font-size: 12px; color: var(--gray-500); margin-left: 2px; }
+
+    /* Metrics Row */
+    .metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .metric-item { background: var(--gray-50); border-radius: 8px; padding: 10px 12px; }
+    .metric-item .m-label { font-size: 11px; color: var(--gray-500); font-weight: 500; margin-bottom: 3px; }
+    .metric-item .m-value { font-size: 16px; font-weight: 700; color: var(--gray-900); }
+    .metric-item .m-unit { font-size: 12px; color: var(--gray-500); margin-left: 2px; }
+
     /* Funnel */
     .funnel {
       display: flex;
@@ -244,6 +304,8 @@
     .btn-danger { background: var(--red-light); color: var(--red); border: 1px solid #FECACA; }
     .btn-danger:hover { background: #FEE2E2; }
     .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-full { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; border-radius: var(--radius); justify-content: center; }
+    .cta-bar { margin-top: 12px; }
 
     /* Compare table */
     .compare-table { width: 100%; border-collapse: collapse; }
@@ -270,6 +332,37 @@
       padding: 6px 14px;
     }
 
+    /* Compare charts */
+    .compare-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    .compare-charts .chart-full { grid-column: 1 / -1; }
+    @media (max-width: 640px) { .compare-charts { grid-template-columns: 1fr; } .compare-charts .chart-full { grid-column: 1; } }
+    .chart-wrap { background: #fff; border: 1.5px solid var(--gray-200); border-radius: var(--radius); padding: 16px; }
+    .chart-title { font-size: 13px; font-weight: 700; color: var(--gray-700); margin-bottom: 14px; }
+    .hbar-row { margin-bottom: 10px; }
+    .hbar-row:last-child { margin-bottom: 0; }
+    .hbar-label { font-size: 11px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; }
+    .hbar-pair { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+    .hbar-tag { font-size: 9px; font-weight: 700; width: 26px; flex-shrink: 0; text-align: center; padding: 1px 3px; border-radius: 3px; }
+    .sim-tag { background: var(--primary-light); color: var(--primary); }
+    .act-tag { background: var(--blue-light); color: var(--blue); }
+    .hbar-track { flex: 1; background: var(--gray-100); border-radius: 99px; height: 9px; overflow: hidden; }
+    .hbar-fill { height: 100%; border-radius: 99px; min-width: 2px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+    .hbar-sim { background: var(--primary); }
+    .hbar-actual { background: var(--blue); }
+    .hbar-neg { background: var(--red); }
+    .hbar-val { font-size: 11px; font-weight: 600; color: var(--gray-700); width: 64px; text-align: right; flex-shrink: 0; }
+    .hbar-val.neg-val { color: var(--red); }
+    .chart-legend { display: flex; gap: 14px; margin-bottom: 12px; }
+    .chart-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--gray-600); }
+    .chart-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .compare-detail-toggle {
+      font-size: 13px; font-weight: 600; color: var(--gray-600);
+      cursor: pointer; padding: 10px 0; list-style: none; user-select: none;
+      border-top: 1px solid var(--gray-100); margin-top: 4px;
+    }
+    .compare-detail-toggle::-webkit-details-marker { display: none; }
+    details[open] .compare-detail-toggle { margin-bottom: 12px; }
+
     /* Scenario cards */
     .scenario-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
     .scenario-card {
@@ -279,6 +372,10 @@
       padding: 16px;
     }
     .scenario-card.selected { border-color: var(--primary); background: var(--primary-light); }
+    .scenario-card.scenario-actual { border-color: var(--blue); border-left: 4px solid var(--blue); }
+    .badge-actual { display: inline-block; background: var(--blue); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle; }
+    .badge-sim { display: inline-block; background: var(--primary); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle; }
+    .col-actual { background: #eff6ff !important; }
     .scenario-card-header {
       display: flex;
       justify-content: space-between;
@@ -309,6 +406,24 @@
     .badge-green { background: var(--green-light); color: var(--green); }
     .badge-red { background: var(--red-light); color: var(--red); }
     .badge-gray { background: var(--gray-100); color: var(--gray-500); }
+
+    /* Page guide banner */
+    .page-guide {
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      line-height: 1.7;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .page-guide.guide-info { background: var(--primary-light); color: var(--gray-700); border-left: 3px solid var(--primary); }
+    .page-guide.guide-tip  { background: var(--blue-light);    color: var(--gray-700); border-left: 3px solid var(--blue); }
+    .page-guide.guide-warn { background: #fffbeb;              color: var(--gray-700); border-left: 3px solid #f59e0b; }
+    .page-guide-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .page-guide p { margin: 0; }
+    .page-guide strong { color: var(--gray-900); }
 
     /* Empty state */
     .empty {
@@ -352,6 +467,13 @@
 <!-- ======================== TAB 1: 시뮬레이션 ======================== -->
 <div id="page-sim" class="page active">
   <div class="container">
+    <div class="page-guide guide-info">
+      <div class="page-guide-icon">💡</div>
+      <p><strong>사용 방법</strong><br>
+      좌측에 예상 수치를 입력하면 우측에 매출이 자동 계산됩니다.
+      만족스러운 시나리오는 <strong>시나리오 저장</strong>으로 보관하세요.
+      저장한 시나리오는 <em>시나리오 비교</em> 탭에서 나란히 비교할 수 있습니다.</p>
+    </div>
     <div class="grid-2">
 
       <!-- 입력 -->
@@ -366,12 +488,11 @@
             </div>
           </div>
           <div class="field">
-            <label>수용 인원</label>
+            <label><span class="tip" data-tip="최대 결제 가능 인원 (0 = 제한 없음)">수용 인원</span></label>
             <div class="field-unit">
               <input type="number" id="s-cap" value="20" min="0" oninput="calcSim()">
               <span class="unit">명</span>
             </div>
-            <div class="hint">최대 결제 가능 인원 (0 = 제한 없음)</div>
           </div>
           <div class="field">
             <label>수수료율</label>
@@ -383,7 +504,7 @@
         </div>
 
         <div class="card">
-          <div class="card-title">📣 광고</div>
+          <div class="card-title">📣 광고 및 비용</div>
           <div class="field">
             <label>총 광고비</label>
             <div class="field-unit">
@@ -392,18 +513,31 @@
             </div>
           </div>
           <div class="field">
-            <label>CAC (결과당 비용)</label>
+            <label><span class="tip" data-tip="메타 광고 캠페인의 '결과당 비용' 수치">CAC (결과당 비용)</span></label>
             <div class="field-unit">
               <input type="number" id="s-cac" value="5" min="0.1" step="0.1" oninput="calcSim()">
               <span class="unit">천원</span>
             </div>
-            <div class="hint">메타 광고의 "결과당 비용" 기준</div>
+          </div>
+          <div class="field">
+            <label><span class="tip" data-tip="광고 클릭 → 웨비나 신청 전환율 (실적 비교용, 매출 계산에 영향 없음)">상페 CVR</span></label>
+            <div class="field-unit">
+              <input type="number" id="s-landingcvr" value="" placeholder="입력 선택" min="0" max="100" step="0.1" oninput="calcSim()">
+              <span class="unit">%</span>
+            </div>
           </div>
           <div class="field">
             <label>오거닉 신청자</label>
             <div class="field-unit">
               <input type="number" id="s-organic" value="0" min="0" oninput="calcSim()">
               <span class="unit">명</span>
+            </div>
+          </div>
+          <div class="field">
+            <label><span class="tip" data-tip="문자 발송비 등 광고 외 기타 집행 비용">기타비용</span></label>
+            <div class="field-unit">
+              <input type="number" id="s-othercost" value="0" min="0" oninput="calcSim()">
+              <span class="unit">만원</span>
             </div>
           </div>
         </div>
@@ -419,12 +553,11 @@
               </div>
             </div>
             <div class="field">
-              <label>FT 참석률</label>
+              <label><span class="tip" data-tip="웨비나를 끝까지 시청한 참석자 비율">FT 참석률</span></label>
               <div class="field-unit">
                 <input type="number" id="s-ft" value="80" min="0" max="100" oninput="calcSim()">
                 <span class="unit">%</span>
               </div>
-              <div class="hint">끝까지 참석한 비율</div>
             </div>
             <div class="field">
               <label>결제 CVR</label>
@@ -436,9 +569,6 @@
           </div>
         </div>
 
-        <div style="text-align:right; margin-top:4px;">
-          <button class="btn btn-primary" onclick="saveScenario()">💾 시나리오 저장</button>
-        </div>
       </div>
 
       <!-- 결과 -->
@@ -450,7 +580,7 @@
 
         <div class="card">
           <div class="card-title">💰 매출 예측</div>
-          <div class="result-grid" id="result-sim"></div>
+          <div id="result-sim"></div>
         </div>
 
         <div class="card">
@@ -460,12 +590,22 @@
       </div>
 
     </div>
+    <div class="cta-bar">
+      <button class="btn btn-primary btn-full" onclick="saveScenario()">💾 시나리오 저장</button>
+    </div>
   </div>
 </div>
 
 <!-- ======================== TAB 2: 실적 입력 ======================== -->
 <div id="page-actual" class="page">
   <div class="container">
+    <div class="page-guide guide-tip">
+      <div class="page-guide-icon">📋</div>
+      <p><strong>사용 방법</strong><br>
+      웨비나 종료 후 실제 운영 결과를 입력하세요.
+      <strong>실적 저장</strong>을 누르면 <em>시나리오 비교</em> 탭에서 사전 시뮬레이션과 나란히 비교할 수 있습니다.
+      <em>비교 분석</em> 탭에서는 저장 없이 현재 입력 값을 시뮬레이션과 즉시 비교합니다.</p>
+    </div>
     <div class="grid-2">
 
       <!-- 입력 -->
@@ -488,17 +628,10 @@
               </div>
             </div>
           </div>
-          <div class="field">
-            <label>외주비</label>
-            <div class="field-unit">
-              <input type="number" id="a-outsource" value="0" min="0" oninput="calcActual()">
-              <span class="unit">만원</span>
-            </div>
-          </div>
         </div>
 
         <div class="card">
-          <div class="card-title">📣 광고 실적</div>
+          <div class="card-title">📣 광고 및 비용</div>
           <div class="field">
             <label>총 광고비</label>
             <div class="field-unit">
@@ -520,6 +653,13 @@
                 <input type="number" id="a-click" value="" placeholder="0" min="0" oninput="calcActual()">
                 <span class="unit">회</span>
               </div>
+            </div>
+          </div>
+          <div class="field">
+            <label><span class="tip" data-tip="문자 발송비 등 광고 외 기타 집행 비용">기타비용</span></label>
+            <div class="field-unit">
+              <input type="number" id="a-outsource" value="0" min="0" oninput="calcActual()">
+              <span class="unit">만원</span>
             </div>
           </div>
         </div>
@@ -569,12 +709,11 @@
               </div>
             </div>
             <div class="field">
-              <label>달성 거래액</label>
+              <label><span class="tip" data-tip="부가세 포함 실제 결제 총액">달성 거래액</span></label>
               <div class="field-unit">
                 <input type="number" id="a-gmv" value="" placeholder="0" min="0" oninput="calcActual()">
                 <span class="unit">만원</span>
               </div>
-              <div class="hint">부가세 포함 금액</div>
             </div>
           </div>
         </div>
@@ -599,12 +738,27 @@
       </div>
 
     </div>
+    <div class="cta-bar">
+      <button class="btn btn-primary btn-full" onclick="saveActual()">💾 실적 저장</button>
+    </div>
   </div>
 </div>
 
 <!-- ======================== TAB 3: 비교 분석 ======================== -->
 <div id="page-compare" class="page">
   <div class="container">
+    <div class="page-guide guide-info">
+      <div class="page-guide-icon">🔍</div>
+      <p><strong>사용 방법</strong><br>
+      <em>시뮬레이션</em> 탭과 <em>실적 입력</em> 탭에 데이터를 입력하면 자동으로 비교됩니다.
+      저장 없이 현재 세션의 입력 값을 즉시 비교합니다.</p>
+    </div>
+    <div class="page-guide guide-warn">
+      <div class="page-guide-icon">⚠️</div>
+      <p><strong>주의사항</strong><br>
+      이 앱은 각 브라우저에 독립적으로 저장됩니다. 같은 기기에서 탭을 여러 개 열면 시나리오 데이터가 섞일 수 있습니다.
+      한 기기 — 한 탭으로 사용하세요.</p>
+    </div>
     <div class="card">
       <div class="card-title">📊 시뮬레이션 vs 실적 비교</div>
       <div id="compare-content"></div>
@@ -615,6 +769,14 @@
 <!-- ======================== TAB 4: 시나리오 비교 ======================== -->
 <div id="page-scenarios" class="page">
   <div class="container">
+    <div class="page-guide guide-tip">
+      <div class="page-guide-icon">📐</div>
+      <p><strong>사용 방법</strong><br>
+      저장한 <strong>시뮬레이션</strong>과 <strong>실적</strong>을 한눈에 비교합니다.
+      2개 이상 저장되면 하단에 비교표가 자동으로 표시됩니다.
+      시뮬레이션 카드의 <em>불러오기</em>로 해당 시나리오를 시뮬레이션 탭에 다시 로드할 수 있습니다.
+      실적 카드는 불러오기를 지원하지 않습니다.</p>
+    </div>
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
       <h2 style="font-size:16px; font-weight:700;">저장된 시나리오</h2>
       <button class="btn btn-danger btn-sm" onclick="clearScenarios()">전체 삭제</button>
@@ -630,7 +792,7 @@
 <!-- Save scenario modal overlay -->
 <div id="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:999; align-items:center; justify-content:center;">
   <div style="background:#fff; border-radius:16px; padding:24px; width:360px; box-shadow:0 20px 40px rgba(0,0,0,.15);">
-    <div style="font-size:16px; font-weight:700; margin-bottom:16px;">시나리오 저장</div>
+    <div id="modal-title" style="font-size:16px; font-weight:700; margin-bottom:16px;">시나리오 저장</div>
     <div class="field">
       <label>시나리오 이름</label>
       <input type="text" id="scenario-name-input" placeholder="예: 보수적 / 공격적 / 1차 런칭" style="width:100%">
@@ -681,6 +843,9 @@ function calcSim() {
   const ftRate = v('s-ft') / 100;
   const cvr   = v('s-cvr') / 100;
 
+  const othercost = v('s-othercost');
+  const landingCvr = v('s-landingcvr'); // 비교용 참고값, 계산에 영향 없음
+
   const adReg = cac > 0 ? (adcost * 10) / cac : 0;
   const totalReg = adReg + organic;
   const attends = totalReg * attendRate;
@@ -689,12 +854,15 @@ function calcSim() {
   const buyers = cap > 0 ? Math.min(rawBuyers, cap) : rawBuyers;
   const gmv = buyers * price;
   const revenue = gmv / 1.1;
-  const feeAmt = gmv * fee;
-  const contribution = revenue - adcost - feeAmt;
+  const pgFee = gmv * 0.035;
+  const feeAmt = revenue * fee;
+  const netProfit = revenue - adcost - othercost - pgFee;
+  const contribution = netProfit * fee;
+  const expectedSettlement = netProfit * (1 - fee);
   const roas = adcost > 0 ? (revenue / adcost) * 100 : 0;
 
-  simResult = { price, cap, fee, adcost, cac, organic, attendRate, ftRate, cvr,
-    adReg, totalReg, attends, ftAttends, buyers, gmv, revenue, feeAmt, contribution, roas };
+  simResult = { price, cap, fee, adcost, othercost, cac, landingCvr, organic, attendRate, ftRate, cvr,
+    adReg, totalReg, attends, ftAttends, buyers, gmv, revenue, pgFee, feeAmt, netProfit, contribution, expectedSettlement, roas };
 
   // Funnel
   document.getElementById('funnel-sim').innerHTML = funnelHTML([
@@ -705,44 +873,95 @@ function calcSim() {
     { label:'결제', n: buyers, rate: cvr },
   ]);
 
-  // Results
-  document.getElementById('result-sim').innerHTML = `
-    <div class="result-item highlight">
-      <label>거래액</label>
-      <span class="value">${fmt(gmv)}</span><span class="value-unit">만원</span>
-    </div>
-    <div class="result-item highlight-green">
-      <label>공헌이익</label>
-      <span class="value">${fmt(contribution)}</span><span class="value-unit">만원</span>
-    </div>
-    <div class="result-item">
-      <label>순매출</label>
-      <span class="value">${fmt(revenue, 1)}</span><span class="value-unit">만원</span>
-    </div>
-    <div class="result-item">
-      <label>결제자</label>
-      <span class="value">${fmt(buyers, 1)}</span><span class="value-unit">명</span>
-    </div>
-    <div class="result-item">
-      <label>수수료</label>
-      <span class="value">${fmt(feeAmt, 1)}</span><span class="value-unit">만원</span>
-    </div>
-    <div class="result-item">
-      <label>ROAS</label>
-      <span class="value">${fmt(roas)}</span><span class="value-unit">%</span>
-    </div>
-  `;
-
-  // Breakeven
-  const beGmv = (adcost + 0) / (1 / 1.1 - fee);
-  const beBuyers = price > 0 ? beGmv / price : 0;
+  // Results — Waterfall
+  const vatAmt = gmv - revenue;
   const profitTag = contribution >= 0
     ? `<span class="badge badge-green">흑자</span>`
     : `<span class="badge badge-red">적자</span>`;
+  document.getElementById('result-sim').innerHTML = `
+    <!-- KPI 상단 3개 -->
+    <div class="kpi-row">
+      <div class="kpi-card kpi-primary">
+        <div class="kpi-label"><span class="tip" data-tip="결제자 × 객단가 (VAT 포함)">거래액</span></div>
+        <div><span class="kpi-value">${fmt(gmv)}</span><span class="kpi-unit">만원</span></div>
+      </div>
+      <div class="kpi-card kpi-green">
+        <div class="kpi-label"><span class="tip" data-tip="총 수익 × 수수료율 (라이브클래스 몫)">공헌이익 ${profitTag}</span></div>
+        <div><span class="kpi-value">${fmt(contribution)}</span><span class="kpi-unit">만원</span></div>
+      </div>
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-label"><span class="tip" data-tip="총 수익 × (100% − 수수료율) — 파트너 수령액">예상 정산금액</span></div>
+        <div><span class="kpi-value">${fmt(expectedSettlement)}</span><span class="kpi-unit">만원</span></div>
+      </div>
+    </div>
+
+    <!-- 매출 흐름 -->
+    <div class="wf-section-label">매출 흐름</div>
+    <div class="wf-row wf-main">
+      <span class="wf-label">거래액</span>
+      <span class="wf-amount">${fmt(gmv)} 만원</span>
+    </div>
+    <div class="wf-deduct">
+      <span>VAT (−10%)</span>
+      <span class="wf-minus">− ${fmt(vatAmt, 1)} 만원</span>
+    </div>
+    <div class="wf-row wf-sub">
+      <span class="wf-label"><span class="tip" data-tip="거래액 ÷ 1.1 (VAT 제외 매출)">매출</span></span>
+      <span class="wf-amount">${fmt(revenue, 1)} 만원</span>
+    </div>
+
+    <!-- 비용 차감 -->
+    <div class="wf-section-label">비용 차감</div>
+    <div class="wf-deduct">
+      <span>광고비</span>
+      <span class="wf-minus">− ${fmt(adcost, 1)} 만원</span>
+    </div>
+    ${othercost > 0 ? `<div class="wf-deduct"><span>기타비용</span><span class="wf-minus">− ${fmt(othercost, 1)} 만원</span></div>` : ''}
+    <div class="wf-deduct">
+      <span>PG 수수료 (3.5%)</span>
+      <span class="wf-minus">− ${fmt(pgFee, 1)} 만원</span>
+    </div>
+    <div class="wf-row wf-profit">
+      <span class="wf-label">총 수익</span>
+      <span class="wf-amount">${fmt(netProfit, 1)} 만원</span>
+    </div>
+
+    <!-- 수익 배분 -->
+    <div class="wf-section-label">수익 배분 (수수료율 ${fmtPct(fee * 100)})</div>
+    <div class="wf-split">
+      <div class="wf-split-item wf-split-lk">
+        <div class="sp-label"><span class="tip" data-tip="총 수익 × 수수료율">공헌이익</span></div>
+        <div class="sp-sublabel">라이브클래스 (${fmtPct(fee * 100)})</div>
+        <div><span class="sp-value">${fmt(contribution, 1)}</span><span class="sp-unit">만원</span></div>
+      </div>
+      <div class="wf-split-item wf-split-partner">
+        <div class="sp-label"><span class="tip" data-tip="총 수익 × (100% − 수수료율)">예상 정산금액</span></div>
+        <div class="sp-sublabel">파트너 (${fmtPct((1 - fee) * 100)})</div>
+        <div><span class="sp-value">${fmt(expectedSettlement, 1)}</span><span class="sp-unit">만원</span></div>
+      </div>
+    </div>
+
+    <!-- 보조 지표 -->
+    <div class="metrics-row">
+      <div class="metric-item">
+        <div class="m-label">결제자</div>
+        <div class="m-value">${fmt(buyers, 1)}<span class="m-unit">명</span></div>
+      </div>
+      <div class="metric-item">
+        <div class="m-label"><span class="tip" data-tip="매출 ÷ 광고비 × 100 (광고비 대비 매출 효율)">ROAS</span></div>
+        <div class="m-value">${fmt(roas)}<span class="m-unit">%</span></div>
+      </div>
+    </div>
+  `;
+
+  // Breakeven: netProfit = 0 → revenue = adcost + othercost + pgFee → gmv*(1/1.1 - 0.035) = adcost + othercost
+  const beDenom = (1 / 1.1 - 0.035);
+  const beGmv = beDenom > 0 ? (adcost + othercost) / beDenom : 0;
+  const beBuyers = price > 0 ? beGmv / price : 0;
   document.getElementById('breakeven-sim').innerHTML = `
     손익 분기 거래액: <b>${fmt(beGmv, 0)}만원</b> (약 ${fmt(beBuyers, 1)}명)<br>
-    현재 예상: <b>${fmt(gmv, 0)}만원</b> &nbsp;${profitTag}<br>
-    공헌이익률: <b>${fmtPct(gmv > 0 ? contribution / revenue * 100 : 0)}</b>
+    현재 예상: <b>${fmt(gmv, 0)}만원</b> &nbsp;${contribution >= 0 ? '<span class="badge badge-green">흑자</span>' : '<span class="badge badge-red">적자</span>'}<br>
+    공헌이익률: <b>${fmtPct(netProfit > 0 ? contribution / netProfit * 100 : 0)}</b>
   `;
 }
 
@@ -763,8 +982,11 @@ function calcActual() {
 
   const totalReg  = adReg + orgReg;
   const revenue   = gmv / 1.1;
-  const feeAmt    = gmv * fee;
-  const contribution = revenue - adcost - feeAmt - outsource;
+  const pgFee     = gmv * 0.035;
+  const feeAmt    = revenue * fee;
+  const netProfit = revenue - adcost - outsource - pgFee;
+  const contribution = netProfit * fee;
+  const expectedSettlement = netProfit * (1 - fee);
 
   const cac      = adReg > 0 ? (adcost * 1000 / adReg) : 0; // 천원
   const ctr      = impression > 0 ? click / impression * 100 : 0;
@@ -775,7 +997,7 @@ function calcActual() {
   const roas     = adcost > 0 ? revenue / adcost * 100 : 0;
 
   actualResult = { price, fee, outsource, adcost, impression, click, adReg, orgReg,
-    attends, ftAttends, buyers, gmv, revenue, feeAmt, contribution, outsource,
+    attends, ftAttends, buyers, gmv, revenue, pgFee, feeAmt, netProfit, contribution, expectedSettlement,
     cac, ctr, regCvr, attendRate, ftRate, buyCvr, roas, totalReg };
 
   // Funnel
@@ -825,20 +1047,24 @@ function calcActual() {
     : `<span class="badge badge-red">적자</span>`;
   document.getElementById('pnl-actual').innerHTML = `
     <div class="result-item highlight">
-      <label>거래액</label>
+      <label><span class="tip" data-tip="결제자 × 객단가 (VAT 포함)">거래액</span></label>
       <span class="value">${fmt(gmv)}</span><span class="value-unit">만원</span>
     </div>
     <div class="result-item highlight-green">
-      <label>공헌이익 ${profitBadge}</label>
+      <label><span class="tip" data-tip="(매출 − 광고비 − 기타비용 − PG수수료) × 수수료율"}>공헌이익 ${profitBadge}</span></label>
       <span class="value">${fmt(contribution)}</span><span class="value-unit">만원</span>
     </div>
     <div class="result-item">
-      <label>순매출</label>
+      <label><span class="tip" data-tip="거래액 ÷ 1.1 (VAT 제외 매출)">매출</span></label>
       <span class="value">${fmt(revenue, 1)}</span><span class="value-unit">만원</span>
     </div>
     <div class="result-item">
-      <label>수수료</label>
+      <label><span class="tip" data-tip="매출 × 수수료율 (라이브클래스 수수료 기준)">수수료 매출</span></label>
       <span class="value">${fmt(feeAmt, 1)}</span><span class="value-unit">만원</span>
+    </div>
+    <div class="result-item" style="background:var(--blue-light); border-radius:8px; padding:8px 12px;">
+      <label><span class="tip" data-tip="총 수익 × (100% − 수수료율) — 파트너 예상 수령액">예상 정산금액</span></label>
+      <span class="value" style="color:var(--blue)">${fmt(expectedSettlement, 1)}</span><span class="value-unit">만원</span>
     </div>
     <div class="result-item">
       <label>외주비</label>
@@ -881,6 +1107,37 @@ function renderCompare() {
     return;
   }
 
+  // 수평 막대 차트 헬퍼
+  function hbarChart(items) {
+    const maxVal = Math.max(...items.flatMap(it => [Math.abs(it.sVal||0), Math.abs(it.aVal||0)]), 1);
+    return items.map(it => {
+      const sv = it.sVal || 0, av = it.aVal || 0;
+      const sPct = (Math.abs(sv) / maxVal * 100).toFixed(1);
+      const aPct = (Math.abs(av) / maxVal * 100).toFixed(1);
+      return `
+        <div class="hbar-row">
+          <div class="hbar-label">${it.label}</div>
+          <div class="hbar-pair">
+            <span class="hbar-tag sim-tag">시뮬</span>
+            <div class="hbar-track"><div class="hbar-fill ${sv<0?'hbar-neg':'hbar-sim'}" style="width:${sPct}%"></div></div>
+            <span class="hbar-val${sv<0?' neg-val':''}">${fmt(sv,1)}${it.unit}</span>
+          </div>
+          <div class="hbar-pair">
+            <span class="hbar-tag act-tag">실적</span>
+            <div class="hbar-track"><div class="hbar-fill ${av<0?'hbar-neg':'hbar-actual'}" style="width:${aPct}%"></div></div>
+            <span class="hbar-val${av<0?' neg-val':''}">${fmt(av,1)}${it.unit}</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  const legend = `
+    <div class="chart-legend">
+      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--primary)"></div>시뮬레이션</div>
+      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--blue)"></div>실적</div>
+    </div>`;
+
+  // 상세 테이블 row 헬퍼
   function row(label, sVal, aVal, unit='', higherBetter=true) {
     const sv = parseFloat(sVal) || 0;
     const av = parseFloat(aVal) || 0;
@@ -897,40 +1154,84 @@ function renderCompare() {
   }
 
   document.getElementById('compare-content').innerHTML = `
-    <table class="compare-table">
-      <thead>
-        <tr>
-          <th>항목</th>
-          <th>시뮬레이션</th>
-          <th>실적</th>
-          <th>차이</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr class="section-header"><td colspan="4">📣 광고</td></tr>
-        ${row('광고비', s.adcost, a.adcost, '만원', false)}
-        ${row('CAC', s.cac, a.cac, '천원', false)}
-        <tr class="section-header"><td colspan="4">👥 퍼널</td></tr>
-        ${row('광고 신청자', s.adReg, a.adReg, '명')}
-        ${row('총 신청자', s.totalReg, a.totalReg, '명')}
-        ${row('참석자', s.attends, a.attends, '명')}
-        ${row('FT 참석자', s.ftAttends, a.ftAttends, '명')}
-        ${row('결제자', s.buyers, a.buyers, '명')}
-        <tr class="section-header"><td colspan="4">📊 전환율</td></tr>
-        ${row('참석률', (s.attendRate||0)*100, a.attendRate, '%')}
-        ${row('FT 참석률', (s.ftRate||0)*100, a.ftRate, '%')}
-        ${row('결제 CVR', (s.cvr||0)*100, a.buyCvr, '%')}
-        <tr class="section-header"><td colspan="4">💰 매출</td></tr>
-        ${row('거래액', s.gmv, a.gmv, '만원')}
-        ${row('순매출', s.revenue, a.revenue, '만원')}
-        ${row('공헌이익', s.contribution, a.contribution, '만원')}
-        ${row('ROAS', s.roas, a.roas, '%')}
-      </tbody>
-    </table>`;
+    ${legend}
+    <div class="compare-charts">
+      <div class="chart-wrap">
+        <div class="chart-title">💰 매출 지표</div>
+        ${hbarChart([
+          { label: '거래액',       sVal: s.gmv,                aVal: a.gmv,        unit: '만' },
+          { label: '매출',         sVal: s.revenue,            aVal: a.revenue,    unit: '만' },
+          { label: '공헌이익',     sVal: s.contribution,       aVal: a.contribution, unit: '만' },
+          { label: '예상 정산금액',sVal: s.expectedSettlement, aVal: a.expectedSettlement, unit: '만' },
+        ])}
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">👥 퍼널 단계</div>
+        ${hbarChart([
+          { label: '광고 신청', sVal: s.adReg,     aVal: a.adReg,     unit: '명' },
+          { label: '총 신청',   sVal: s.totalReg,  aVal: a.totalReg,  unit: '명' },
+          { label: '참석',      sVal: s.attends,   aVal: a.attends,   unit: '명' },
+          { label: 'FT 참석',   sVal: s.ftAttends, aVal: a.ftAttends, unit: '명' },
+          { label: '결제',      sVal: s.buyers,    aVal: a.buyers,    unit: '명' },
+        ])}
+      </div>
+      <div class="chart-wrap chart-full">
+        <div class="chart-title">📈 전환율 · 효율</div>
+        ${hbarChart([
+          { label: '참석률',    sVal: (s.attendRate||0)*100, aVal: a.attendRate, unit: '%' },
+          { label: 'FT 참석률', sVal: (s.ftRate||0)*100,    aVal: a.ftRate,     unit: '%' },
+          { label: '결제 CVR',  sVal: (s.cvr||0)*100,       aVal: a.buyCvr,     unit: '%' },
+          { label: 'ROAS',      sVal: s.roas,               aVal: a.roas,       unit: '%' },
+          { label: 'CAC',       sVal: s.cac,                aVal: a.cac,        unit: '천원' },
+        ])}
+      </div>
+    </div>
+    <details>
+      <summary class="compare-detail-toggle">📋 상세 수치 펼치기 ▾</summary>
+      <table class="compare-table">
+        <thead>
+          <tr><th>항목</th><th>시뮬레이션</th><th>실적</th><th>차이</th></tr>
+        </thead>
+        <tbody>
+          <tr class="section-header"><td colspan="4">📣 광고</td></tr>
+          ${row('광고비', s.adcost, a.adcost, '만원', false)}
+          ${row('CAC', s.cac, a.cac, '천원', false)}
+          <tr class="section-header"><td colspan="4">👥 퍼널</td></tr>
+          ${row('광고 신청자', s.adReg, a.adReg, '명')}
+          ${row('총 신청자', s.totalReg, a.totalReg, '명')}
+          ${row('참석자', s.attends, a.attends, '명')}
+          ${row('FT 참석자', s.ftAttends, a.ftAttends, '명')}
+          ${row('결제자', s.buyers, a.buyers, '명')}
+          <tr class="section-header"><td colspan="4">📊 전환율</td></tr>
+          ${row('상페 CVR', s.landingCvr||0, a.regCvr, '%')}
+          ${row('참석률', (s.attendRate||0)*100, a.attendRate, '%')}
+          ${row('FT 참석률', (s.ftRate||0)*100, a.ftRate, '%')}
+          ${row('결제 CVR', (s.cvr||0)*100, a.buyCvr, '%')}
+          <tr class="section-header"><td colspan="4">💰 매출</td></tr>
+          ${row('거래액', s.gmv, a.gmv, '만원')}
+          ${row('매출', s.revenue, a.revenue, '만원')}
+          ${row('공헌이익', s.contribution, a.contribution, '만원')}
+          ${row('예상 정산금액', s.expectedSettlement, a.expectedSettlement, '만원')}
+          ${row('ROAS', s.roas, a.roas, '%')}
+        </tbody>
+      </table>
+    </details>`;
 }
 
 // ===================== SCENARIOS =====================
+let savingActual = false;
+
 function saveScenario() {
+  savingActual = false;
+  document.getElementById('modal-title').textContent = '시나리오 저장';
+  document.getElementById('scenario-name-input').value = '';
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('scenario-name-input').focus(), 50);
+}
+
+function saveActual() {
+  savingActual = true;
+  document.getElementById('modal-title').textContent = '실적 저장';
   document.getElementById('scenario-name-input').value = '';
   document.getElementById('modal').style.display = 'flex';
   setTimeout(() => document.getElementById('scenario-name-input').focus(), 50);
@@ -941,17 +1242,15 @@ function closeModal() {
 }
 
 function confirmSave() {
-  const name = document.getElementById('scenario-name-input').value.trim() || '시나리오 ' + (scenarios.length + 1);
-  const s = { ...simResult };
-  scenarios.push({
-    id: Date.now(),
-    name,
-    date: new Date().toLocaleDateString('ko'),
-    ...s,
-  });
+  const defaultName = savingActual
+    ? '실적 ' + (scenarios.filter(s => s.isActual).length + 1)
+    : '시나리오 ' + (scenarios.filter(s => !s.isActual).length + 1);
+  const name = document.getElementById('scenario-name-input').value.trim() || defaultName;
+  const data = savingActual ? { ...actualResult, isActual: true } : { ...simResult, isActual: false };
+  scenarios.push({ id: Date.now(), name, date: new Date().toLocaleDateString('ko'), ...data });
   localStorage.setItem('rls_scenarios', JSON.stringify(scenarios));
   closeModal();
-  showToast('시나리오가 저장되었습니다.');
+  showToast(savingActual ? '실적이 저장되었습니다.' : '시나리오가 저장되었습니다.');
 }
 
 function deleteScenario(id) {
@@ -1000,10 +1299,13 @@ function renderScenarios() {
   }
 
   container.innerHTML = `<div class="scenario-list">${scenarios.map(s => `
-    <div class="scenario-card">
+    <div class="scenario-card${s.isActual ? ' scenario-actual' : ''}">
       <div class="scenario-card-header">
         <div>
-          <div class="scenario-name">${s.name}</div>
+          <div class="scenario-name">
+            ${s.isActual ? '<span class="badge-actual">📊 실적</span>' : '<span class="badge-sim">📐 시뮬</span>'}
+            ${s.name}
+          </div>
           <div class="scenario-meta">${s.date} · 객단가 ${fmt(s.price)}만원</div>
         </div>
         <button class="btn btn-danger btn-sm" onclick="deleteScenario(${s.id})">삭제</button>
@@ -1018,7 +1320,7 @@ function renderScenarios() {
         </div>
       </div>
       <div style="margin-top:12px; display:flex; gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="loadScenario(${s.id})">📥 불러오기</button>
+        ${s.isActual ? '' : `<button class="btn btn-secondary btn-sm" onclick="loadScenario(${s.id})">📥 불러오기</button>`}
       </div>
     </div>
   `).join('')}</div>`;
@@ -1031,21 +1333,22 @@ function renderScenarios() {
       { key: 'cac', label: 'CAC', unit: '천원', better: 'low' },
       { key: 'buyers', label: '결제자', unit: '명', better: 'high' },
       { key: 'gmv', label: '거래액', unit: '만', better: 'high' },
-      { key: 'revenue', label: '순매출', unit: '만', better: 'high' },
+      { key: 'revenue', label: '매출', unit: '만', better: 'high' },
       { key: 'contribution', label: '공헌이익', unit: '만', better: 'high' },
+      { key: 'expectedSettlement', label: '예상 정산금액', unit: '만', better: 'high' },
       { key: 'roas', label: 'ROAS', unit: '%', better: 'high' },
     ];
 
-    const header = `<tr><th>항목</th>${scenarios.map(s => `<th>${s.name}</th>`).join('')}</tr>`;
+    const header = `<tr><th>항목</th>${scenarios.map(s => `<th${s.isActual ? ' class="col-actual"' : ''}>${s.isActual ? '📊 ' : ''}${s.name}</th>`).join('')}</tr>`;
     const rows = metrics.map(m => {
       const vals = scenarios.map(s => s[m.key] || 0);
       const best = m.better === 'high' ? Math.max(...vals) : Math.min(...vals);
       const worst = m.better === 'high' ? Math.min(...vals) : Math.max(...vals);
-      const cells = vals.map(v => {
-        let cls = '';
-        if (v === best && vals.filter(x => x === best).length < vals.length) cls = 'best';
-        else if (v === worst && vals.filter(x => x === worst).length < vals.length) cls = 'worst';
-        return `<td class="${cls}">${fmt(v, 1)}${m.unit}</td>`;
+      const cells = vals.map((v, i) => {
+        let cls = scenarios[i].isActual ? 'col-actual' : '';
+        if (v === best && vals.filter(x => x === best).length < vals.length) cls += ' best';
+        else if (v === worst && vals.filter(x => x === worst).length < vals.length) cls += ' worst';
+        return `<td class="${cls.trim()}">${fmt(v, 1)}${m.unit}</td>`;
       }).join('');
       return `<tr><td>${m.label}</td>${cells}</tr>`;
     }).join('');
