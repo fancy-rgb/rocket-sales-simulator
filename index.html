@@ -222,6 +222,8 @@
     .kpi-primary .kpi-value { color: var(--primary); }
     .kpi-green { background: var(--green-light); }
     .kpi-green .kpi-value { color: var(--green); }
+    .kpi-red { background: var(--red-light); }
+    .kpi-red .kpi-value { color: var(--red); }
     .kpi-blue { background: var(--blue-light); }
     .kpi-blue .kpi-value { color: var(--blue); }
 
@@ -231,10 +233,12 @@
     .wf-main { background: var(--primary-light); }
     .wf-sub { background: var(--gray-100); }
     .wf-profit { background: var(--green-light); }
+    .wf-loss   { background: var(--red-light); }
     .wf-label { font-size: 13px; font-weight: 600; color: var(--gray-700); }
     .wf-amount { font-size: 14px; font-weight: 700; color: var(--gray-900); }
     .wf-main .wf-label, .wf-main .wf-amount { color: var(--primary); }
     .wf-profit .wf-label, .wf-profit .wf-amount { color: var(--green); }
+    .wf-loss .wf-label, .wf-loss .wf-amount { color: var(--red); }
     .wf-deduct { display: flex; justify-content: space-between; padding: 5px 12px 5px 22px; font-size: 12px; color: var(--gray-500); border-left: 2px solid var(--gray-200); margin: 0 0 2px 10px; }
     .wf-minus { color: var(--red); font-weight: 600; }
     .wf-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -887,11 +891,11 @@ function calcSim() {
         <div class="kpi-label"><span class="tip" data-tip="결제자 × 객단가 (VAT 포함)">거래액</span></div>
         <div><span class="kpi-value">${fmt(gmv)}</span><span class="kpi-unit">만원</span></div>
       </div>
-      <div class="kpi-card kpi-green">
+      <div class="kpi-card ${contribution >= 0 ? 'kpi-green' : 'kpi-red'}">
         <div class="kpi-label"><span class="tip" data-tip="총 수익 × 수수료율 (라이브클래스 몫)">공헌이익 ${profitTag}</span></div>
         <div><span class="kpi-value">${fmt(contribution)}</span><span class="kpi-unit">만원</span></div>
       </div>
-      <div class="kpi-card kpi-blue">
+      <div class="kpi-card ${expectedSettlement >= 0 ? 'kpi-blue' : 'kpi-red'}">
         <div class="kpi-label"><span class="tip" data-tip="총 수익 × (100% − 수수료율) — 파트너 수령액">예상 정산금액</span></div>
         <div><span class="kpi-value">${fmt(expectedSettlement)}</span><span class="kpi-unit">만원</span></div>
       </div>
@@ -923,7 +927,7 @@ function calcSim() {
       <span>PG 수수료 (3.5%)</span>
       <span class="wf-minus">− ${fmt(pgFee, 1)} 만원</span>
     </div>
-    <div class="wf-row wf-profit">
+    <div class="wf-row ${netProfit >= 0 ? 'wf-profit' : 'wf-loss'}">
       <span class="wf-label">총 수익</span>
       <span class="wf-amount">${fmt(netProfit, 1)} 만원</span>
     </div>
@@ -934,12 +938,12 @@ function calcSim() {
       <div class="wf-split-item wf-split-lk">
         <div class="sp-label"><span class="tip" data-tip="총 수익 × 수수료율">공헌이익</span></div>
         <div class="sp-sublabel">라이브클래스 (${fmtPct(fee * 100)})</div>
-        <div><span class="sp-value">${fmt(contribution, 1)}</span><span class="sp-unit">만원</span></div>
+        <div><span class="sp-value" style="color:${contribution >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(contribution, 1)}</span><span class="sp-unit">만원</span></div>
       </div>
       <div class="wf-split-item wf-split-partner">
         <div class="sp-label"><span class="tip" data-tip="총 수익 × (100% − 수수료율)">예상 정산금액</span></div>
         <div class="sp-sublabel">파트너 (${fmtPct((1 - fee) * 100)})</div>
-        <div><span class="sp-value">${fmt(expectedSettlement, 1)}</span><span class="sp-unit">만원</span></div>
+        <div><span class="sp-value" style="color:${expectedSettlement >= 0 ? 'var(--blue)' : 'var(--red)'}">${fmt(expectedSettlement, 1)}</span><span class="sp-unit">만원</span></div>
       </div>
     </div>
 
@@ -1054,11 +1058,11 @@ function calcActual() {
         <div class="kpi-label"><span class="tip" data-tip="결제자 × 객단가 (VAT 포함)">거래액</span></div>
         <div><span class="kpi-value">${fmt(gmv)}</span><span class="kpi-unit">만원</span></div>
       </div>
-      <div class="kpi-card kpi-green">
+      <div class="kpi-card ${contribution >= 0 ? 'kpi-green' : 'kpi-red'}">
         <div class="kpi-label"><span class="tip" data-tip="(매출 − 광고비 − 기타비용 − PG수수료) × 수수료율">공헌이익 ${profitBadgeA}</span></div>
         <div><span class="kpi-value">${fmt(contribution)}</span><span class="kpi-unit">만원</span></div>
       </div>
-      <div class="kpi-card kpi-blue">
+      <div class="kpi-card ${expectedSettlement >= 0 ? 'kpi-blue' : 'kpi-red'}">
         <div class="kpi-label"><span class="tip" data-tip="총 수익 × (100% − 수수료율) — 파트너 수령액">예상 정산금액</span></div>
         <div><span class="kpi-value">${fmt(expectedSettlement)}</span><span class="kpi-unit">만원</span></div>
       </div>
@@ -1086,7 +1090,7 @@ function calcActual() {
       <span>PG 수수료 (3.5%)</span>
       <span class="wf-minus">− ${fmt(pgFee, 1)} 만원</span>
     </div>
-    <div class="wf-row wf-profit">
+    <div class="wf-row ${netProfit >= 0 ? 'wf-profit' : 'wf-loss'}">
       <span class="wf-label">총 수익</span>
       <span class="wf-amount">${fmt(netProfit, 1)} 만원</span>
     </div>
@@ -1095,12 +1099,12 @@ function calcActual() {
       <div class="wf-split-item wf-split-lk">
         <div class="sp-label">공헌이익</div>
         <div class="sp-sublabel">라이브클래스 (${fmtPct(fee * 100)})</div>
-        <div><span class="sp-value">${fmt(contribution, 1)}</span><span class="sp-unit">만원</span></div>
+        <div><span class="sp-value" style="color:${contribution >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(contribution, 1)}</span><span class="sp-unit">만원</span></div>
       </div>
       <div class="wf-split-item wf-split-partner">
         <div class="sp-label">예상 정산금액</div>
         <div class="sp-sublabel">파트너 (${fmtPct((1 - fee) * 100)})</div>
-        <div><span class="sp-value">${fmt(expectedSettlement, 1)}</span><span class="sp-unit">만원</span></div>
+        <div><span class="sp-value" style="color:${expectedSettlement >= 0 ? 'var(--blue)' : 'var(--red)'}">${fmt(expectedSettlement, 1)}</span><span class="sp-unit">만원</span></div>
       </div>
     </div>
     <div class="metrics-row">
