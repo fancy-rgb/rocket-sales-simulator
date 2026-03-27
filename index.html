@@ -1051,22 +1051,22 @@ function calcActual() {
     <div class="result-item">
       <label>참석률</label>
       <span class="value">${fmtPct(attendRate)}</span>
-      ${hasSim ? `<span class="stat-delta">${deltaStr(attendRate, (simResult.attendRate||0)*100, '%')}</span>` : ''}
+      ${hasSim ? `<span class="stat-delta">${deltaStr(attendRate, (simResult.attendRate||0)*100, '%p')}</span>` : ''}
     </div>
     <div class="result-item">
       <label>FT 참석률</label>
       <span class="value">${fmtPct(ftRate)}</span>
-      ${hasSim ? `<span class="stat-delta">${deltaStr(ftRate, (simResult.ftRate||0)*100, '%')}</span>` : ''}
+      ${hasSim ? `<span class="stat-delta">${deltaStr(ftRate, (simResult.ftRate||0)*100, '%p')}</span>` : ''}
     </div>
     <div class="result-item">
       <label>결제 CVR</label>
       <span class="value">${fmtPct(buyCvr)}</span>
-      ${hasSim ? `<span class="stat-delta">${deltaStr(buyCvr, (simResult.cvr||0)*100, '%')}</span>` : ''}
+      ${hasSim ? `<span class="stat-delta">${deltaStr(buyCvr, (simResult.cvr||0)*100, '%p')}</span>` : ''}
     </div>
     <div class="result-item">
       <label>ROAS</label>
       <span class="value">${fmt(roas)}</span><span class="value-unit">%</span>
-      ${hasSim ? `<span class="stat-delta">${deltaStr(roas, simResult.roas, '%')}</span>` : ''}
+      ${hasSim ? `<span class="stat-delta">${deltaStr(roas, simResult.roas, '%p')}</span>` : ''}
     </div>
   `;
 
@@ -1404,15 +1404,15 @@ function renderScenarios() {
               ${simActRow('FT 참석자', sim.ftAttends, act.ftAttends, '명')}
               ${simActRow('결제자', sim.buyers, act.buyers, '명')}
               <tr class="section-header"><td colspan="4">📊 전환율</td></tr>
-              ${simActRow('참석률', (sim.attendRate||0)*100, act.attendRate, '%')}
-              ${simActRow('FT 참석률', (sim.ftRate||0)*100, act.ftRate, '%')}
-              ${simActRow('결제 CVR', (sim.cvr||0)*100, act.buyCvr, '%')}
+              ${simActRow('참석률', (sim.attendRate||0)*100, act.attendRate, '%p')}
+              ${simActRow('FT 참석률', (sim.ftRate||0)*100, act.ftRate, '%p')}
+              ${simActRow('결제 CVR', (sim.cvr||0)*100, act.buyCvr, '%p')}
               <tr class="section-header"><td colspan="4">💰 매출</td></tr>
               ${simActRow('거래액', sim.gmv, act.gmv, '만원')}
               ${simActRow('매출', sim.revenue, act.revenue, '만원')}
               ${simActRow('공헌이익', sim.contribution, act.contribution, '만원')}
               ${simActRow('예상 정산금액', sim.expectedSettlement, act.expectedSettlement, '만원')}
-              ${simActRow('ROAS', sim.roas, act.roas, '%')}
+              ${simActRow('ROAS', sim.roas, act.roas, '%p')}
             </tbody>
           </table>
         </details>
