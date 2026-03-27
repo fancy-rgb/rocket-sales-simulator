@@ -452,6 +452,13 @@
     .page-guide p { margin: 0; }
     .page-guide strong { color: var(--gray-900); }
 
+    /* Delta indicators */
+    .kpi-delta { font-size: 11px; font-weight: 600; margin-top: 4px; }
+    .stat-delta { font-size: 10px; font-weight: 600; display: block; margin-top: 2px; }
+    .delta-pos { color: var(--green); }
+    .delta-neg { color: var(--red); }
+    .delta-zero { color: var(--gray-400); }
+
     /* Empty state */
     .empty {
       text-align: center;
@@ -836,6 +843,16 @@ function fmtPct(n) {
   return n.toFixed(1) + '%';
 }
 function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function deltaStr(actual, base, unit='만', lowerBetter=false) {
+  if (!base || base === 0 || !actual) return '';
+  const diff = actual - base;
+  const pct = diff / Math.abs(base) * 100;
+  if (Math.abs(pct) < 0.05) return `<span class="delta-zero">변동 없음</span>`;
+  const isGood = lowerBetter ? diff < 0 : diff > 0;
+  const cls = isGood ? 'delta-pos' : 'delta-neg';
+  const sign = diff > 0 ? '+' : '';
+  return `<span class="${cls}">${sign}${fmt(diff, 1)}${unit} (${sign}${pct.toFixed(1)}%)</span>`;
+}
 
 // ===================== SIMULATION CALC =====================
 function calcSim() {
@@ -1016,10 +1033,12 @@ function calcActual() {
   ]);
 
   // Metrics
+  const hasSim = simResult.gmv > 0;
   document.getElementById('result-actual').innerHTML = `
     <div class="result-item">
       <label>CAC (실제)</label>
       <span class="value">${fmt(cac, 1)}</span><span class="value-unit">천원</span>
+      ${hasSim ? `<span class="stat-delta">${deltaStr(cac, simResult.cac, '천원', true)}</span>` : ''}
     </div>
     <div class="result-item">
       <label>CTR</label>
@@ -1032,18 +1051,22 @@ function calcActual() {
     <div class="result-item">
       <label>참석률</label>
       <span class="value">${fmtPct(attendRate)}</span>
+      ${hasSim ? `<span class="stat-delta">${deltaStr(attendRate, (simResult.attendRate||0)*100, '%')}</span>` : ''}
     </div>
     <div class="result-item">
       <label>FT 참석률</label>
       <span class="value">${fmtPct(ftRate)}</span>
+      ${hasSim ? `<span class="stat-delta">${deltaStr(ftRate, (simResult.ftRate||0)*100, '%')}</span>` : ''}
     </div>
     <div class="result-item">
       <label>결제 CVR</label>
       <span class="value">${fmtPct(buyCvr)}</span>
+      ${hasSim ? `<span class="stat-delta">${deltaStr(buyCvr, (simResult.cvr||0)*100, '%')}</span>` : ''}
     </div>
     <div class="result-item">
       <label>ROAS</label>
       <span class="value">${fmt(roas)}</span><span class="value-unit">%</span>
+      ${hasSim ? `<span class="stat-delta">${deltaStr(roas, simResult.roas, '%')}</span>` : ''}
     </div>
   `;
 
@@ -1057,14 +1080,17 @@ function calcActual() {
       <div class="kpi-card kpi-primary">
         <div class="kpi-label"><span class="tip" data-tip="결제자 × 객단가 (VAT 포함)">거래액</span></div>
         <div><span class="kpi-value">${fmt(gmv)}</span><span class="kpi-unit">만원</span></div>
+        ${hasSim ? `<div class="kpi-delta">${deltaStr(gmv, simResult.gmv, '만')}</div>` : ''}
       </div>
       <div class="kpi-card ${contribution >= 0 ? 'kpi-green' : 'kpi-red'}">
         <div class="kpi-label"><span class="tip" data-tip="(매출 − 광고비 − 기타비용 − PG수수료) × 수수료율">공헌이익 ${profitBadgeA}</span></div>
         <div><span class="kpi-value">${fmt(contribution)}</span><span class="kpi-unit">만원</span></div>
+        ${hasSim ? `<div class="kpi-delta">${deltaStr(contribution, simResult.contribution, '만')}</div>` : ''}
       </div>
       <div class="kpi-card ${expectedSettlement >= 0 ? 'kpi-blue' : 'kpi-red'}">
         <div class="kpi-label"><span class="tip" data-tip="총 수익 × (100% − 수수료율) — 파트너 수령액">예상 정산금액</span></div>
         <div><span class="kpi-value">${fmt(expectedSettlement)}</span><span class="kpi-unit">만원</span></div>
+        ${hasSim ? `<div class="kpi-delta">${deltaStr(expectedSettlement, simResult.expectedSettlement, '만')}</div>` : ''}
       </div>
     </div>
     <div class="wf-section-label">매출 흐름</div>
@@ -1412,7 +1438,11 @@ function renderScenarios() {
   }
 
   // 카드 렌더링
-  container.innerHTML = `<div class="scenario-list">${filtered.map(s => `
+  container.innerHTML = `<div class="scenario-list">${filtered.map(s => {
+    const pairedSim = s.isActual
+      ? scenarios.filter(x => !x.isActual && (x.launchName||'미분류') === (s.launchName||'미분류')).slice(-1)[0]
+      : null;
+    return `
     <div class="scenario-card${s.isActual ? ' scenario-actual' : ''}">
       <div class="scenario-card-header">
         <div>
@@ -1425,19 +1455,37 @@ function renderScenarios() {
         <button class="btn btn-danger btn-sm" onclick="deleteScenario(${s.id})">삭제</button>
       </div>
       <div class="scenario-stats">
-        <div class="scenario-stat"><label>광고비</label><span class="val">${fmt(s.adcost)}만</span></div>
-        <div class="scenario-stat"><label>CAC</label><span class="val">${fmt(s.cac, 1)}천</span></div>
-        <div class="scenario-stat"><label>결제자</label><span class="val">${fmt(s.buyers, 1)}명</span></div>
-        <div class="scenario-stat"><label>거래액</label><span class="val">${fmt(s.gmv)}만</span></div>
-        <div class="scenario-stat"><label>공헌이익</label>
+        <div class="scenario-stat">
+          <label>광고비</label>
+          <span class="val">${fmt(s.adcost)}만</span>
+          ${pairedSim ? `<span class="stat-delta">${deltaStr(s.adcost, pairedSim.adcost, '만', true)}</span>` : ''}
+        </div>
+        <div class="scenario-stat">
+          <label>CAC</label>
+          <span class="val">${fmt(s.cac, 1)}천</span>
+          ${pairedSim ? `<span class="stat-delta">${deltaStr(s.cac, pairedSim.cac, '천원', true)}</span>` : ''}
+        </div>
+        <div class="scenario-stat">
+          <label>결제자</label>
+          <span class="val">${fmt(s.buyers, 1)}명</span>
+          ${pairedSim ? `<span class="stat-delta">${deltaStr(s.buyers, pairedSim.buyers, '명')}</span>` : ''}
+        </div>
+        <div class="scenario-stat">
+          <label>거래액</label>
+          <span class="val">${fmt(s.gmv)}만</span>
+          ${pairedSim ? `<span class="stat-delta">${deltaStr(s.gmv, pairedSim.gmv, '만')}</span>` : ''}
+        </div>
+        <div class="scenario-stat">
+          <label>공헌이익</label>
           <span class="val" style="color:${s.contribution>=0?'var(--green)':'var(--red)'}">${fmt(s.contribution)}만</span>
+          ${pairedSim ? `<span class="stat-delta">${deltaStr(s.contribution, pairedSim.contribution, '만')}</span>` : ''}
         </div>
       </div>
       <div style="margin-top:12px; display:flex; gap:6px;">
         ${s.isActual ? '' : `<button class="btn btn-secondary btn-sm" onclick="loadScenario(${s.id})">📥 불러오기</button>`}
       </div>
-    </div>
-  `).join('')}</div>`;
+    </div>`;
+  }).join('')}</div>`;
 
   // 비교표 (2개 이상)
   if (filtered.length >= 2) {
