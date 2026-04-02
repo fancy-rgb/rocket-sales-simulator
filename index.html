@@ -1483,7 +1483,7 @@ function renderScenarios() {
             ${s.isActual ? '<span class="badge-actual">📊 실적</span>' : '<span class="badge-sim">📐 시뮬</span>'}
             ${s.name}
           </div>
-          <div class="scenario-meta">${s.date} · 객단가 ${fmt(s.price)}만원</div>
+          <div class="scenario-meta">${s.date}${s.author ? ` · ${s.author}` : ''} · 객단가 ${fmt(s.price)}만원</div>
         </div>
         <button class="btn btn-danger btn-sm" onclick="deleteScenario('${s.id}')">삭제</button>
       </div>
