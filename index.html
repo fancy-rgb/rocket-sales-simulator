@@ -1277,7 +1277,7 @@ function closeModal() {
   document.getElementById('modal').style.display = 'none';
 }
 
-function confirmSave() {
+async function confirmSave() {
   const select = document.getElementById('launch-select');
   const newInput = document.getElementById('launch-new-input');
 
@@ -1291,9 +1291,12 @@ function confirmSave() {
   }
   if (!launchName) { alert('런칭명을 입력해주세요.'); return; }
 
+  const author = document.getElementById('author-select').value;
   const data = savingActual ? { ...actualResult, isActual: true } : { ...simResult, isActual: false };
-  scenarios.push({ id: Date.now(), name: launchName, launchName, date: new Date().toLocaleDateString('ko'), ...data });
-  localStorage.setItem('rls_scenarios', JSON.stringify(scenarios));
+  const docData = { name: launchName, launchName, author, date: new Date().toLocaleDateString('ko'), createdAt: Date.now(), ...data };
+
+  const docRef = await db.collection('scenarios').add(docData);
+  scenarios.push({ id: docRef.id, ...docData });
   closeModal();
   showToast(savingActual ? '실적이 저장되었습니다.' : '시나리오가 저장되었습니다.');
 }
