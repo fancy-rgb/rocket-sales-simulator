@@ -396,6 +396,7 @@
     .scenario-card.scenario-actual { border-color: var(--blue); border-left: 4px solid var(--blue); }
     .badge-actual { display: inline-block; background: var(--blue); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle; }
     .badge-sim { display: inline-block; background: var(--primary); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle; }
+    .badge-author { display: inline-block; background: #F3F4F6; color: #374151; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle; }
     .col-actual { background: #eff6ff !important; }
     .scenario-card-header {
       display: flex;
@@ -792,7 +793,8 @@
       <button class="btn btn-danger btn-sm" onclick="clearScenarios()">전체 삭제</button>
     </div>
     <div id="launch-filter" class="launch-filter"></div>
-    <div id="type-filter" class="launch-filter" style="margin-bottom:8px;"></div>
+    <div id="type-filter" class="launch-filter"></div>
+    <div id="author-filter" class="launch-filter" style="margin-bottom:8px;"></div>
     <div id="scenario-chart-area"></div>
     <div id="scenario-list"></div>
     <div class="card" style="margin-top:16px; display:none;" id="scenario-compare-section">
@@ -1228,10 +1230,13 @@ async function loadScenariosFromFirestore() {
 let savingActual = false;
 let currentLaunchFilter = '전체';
 let currentTypeFilter = '전체';
+let currentAuthorFilter = '전체';
+let lastSelectedAuthor = localStorage.getItem('lastSelectedAuthor') || '';
 
 function openSaveModal() {
   document.getElementById('author-select').innerHTML =
     TEAM_MEMBERS.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (lastSelectedAuthor) document.getElementById('author-select').value = lastSelectedAuthor;
 
   const names = [...new Set(scenarios.map(s => s.launchName).filter(Boolean))];
   const select = document.getElementById('launch-select');
@@ -1296,6 +1301,8 @@ async function confirmSave() {
   if (!launchName) { alert('런칭명을 입력해주세요.'); return; }
 
   const author = document.getElementById('author-select').value;
+  lastSelectedAuthor = author;
+  localStorage.setItem('lastSelectedAuthor', author);
   const data = savingActual ? { ...actualResult, isActual: true } : { ...simResult, isActual: false };
   const docData = { name: launchName, launchName, author, date: new Date().toLocaleDateString('ko'), createdAt: Date.now(), ...data };
 
@@ -1312,6 +1319,11 @@ function setLaunchFilter(name) {
 
 function setTypeFilter(type) {
   currentTypeFilter = type;
+  renderScenarios();
+}
+
+function setAuthorFilter(author) {
+  currentAuthorFilter = author;
   renderScenarios();
 }
 
@@ -1368,6 +1380,12 @@ function renderScenarios() {
   // 타입 필터 버튼
   document.getElementById('type-filter').innerHTML = ['전체', '📐 시뮬만', '📊 실적만'].map(t =>
     `<button class="filter-btn${currentTypeFilter === t ? ' active' : ''}" onclick="setTypeFilter('${t}')">${t}</button>`
+  ).join('');
+
+  // 작성자 필터 버튼
+  const authors = ['전체', ...new Set(scenarios.map(s => s.author).filter(Boolean))];
+  document.getElementById('author-filter').innerHTML = authors.map(a =>
+    `<button class="filter-btn${currentAuthorFilter === a ? ' active' : ''}" onclick="setAuthorFilter('${a}')">${a}</button>`
   ).join('');
 
   if (scenarios.length === 0) {
@@ -1462,11 +1480,16 @@ function renderScenarios() {
   }
 
   // 타입 필터 적용 (카드 + 비교표용)
-  const filtered = launchFiltered.filter(s => {
+  const typeFiltered = launchFiltered.filter(s => {
     if (currentTypeFilter === '📐 시뮬만') return !s.isActual;
     if (currentTypeFilter === '📊 실적만') return s.isActual;
     return true;
   });
+
+  // 작성자 필터 적용
+  const filtered = currentAuthorFilter === '전체'
+    ? typeFiltered
+    : typeFiltered.filter(s => s.author === currentAuthorFilter);
 
   if (filtered.length === 0) {
     container.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><p>해당 조건에 저장된 항목이 없습니다.</p></div>`;
@@ -1485,9 +1508,10 @@ function renderScenarios() {
         <div>
           <div class="scenario-name">
             ${s.isActual ? '<span class="badge-actual">📊 실적</span>' : '<span class="badge-sim">📐 시뮬</span>'}
+            ${s.author ? `<span class="badge-author">${s.author}</span>` : ''}
             ${s.name}
           </div>
-          <div class="scenario-meta">${s.date}${s.author ? ` · ${s.author}` : ''} · 객단가 ${fmt(s.price)}만원</div>
+          <div class="scenario-meta">${s.date} · 객단가 ${fmt(s.price)}만원</div>
         </div>
         <button class="btn btn-danger btn-sm" onclick="deleteScenario('${s.id}')">삭제</button>
       </div>
