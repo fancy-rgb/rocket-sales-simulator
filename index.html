@@ -811,6 +811,10 @@
       <select id="launch-select" class="modal-select" onchange="onLaunchSelectChange()"></select>
       <input type="text" id="launch-new-input" placeholder="새 런칭명 입력 (예: A사 1차 런칭)" style="width:100%; margin-top:8px; display:none;">
     </div>
+    <div class="field" style="margin-top:12px;">
+      <label>작성자</label>
+      <select id="author-select" class="modal-select"></select>
+    </div>
     <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
       <button class="btn btn-secondary" onclick="closeModal()">취소</button>
       <button class="btn btn-primary" onclick="confirmSave()">저장</button>
@@ -819,6 +823,21 @@
 </div>
 
 <script>
+// ===================== FIREBASE =====================
+const firebaseConfig = {
+  apiKey: "AIzaSyDgIdAZ-h8WvRzcZK4IKkDr1wqZnB8EkXw",
+  authDomain: "rocket-simulator-f988e.firebaseapp.com",
+  projectId: "rocket-simulator-f988e",
+  storageBucket: "rocket-simulator-f988e.firebasestorage.app",
+  messagingSenderId: "163001247771",
+  appId: "1:163001247771:web:729ed3949c046f308db0be"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// 팀원 목록
+const TEAM_MEMBERS = ['셀린', '노바', 'MJ', '테오', '아린'];
+
 // ===================== STATE =====================
 let simResult = {};
 let actualResult = {};
@@ -1200,6 +1219,9 @@ let currentLaunchFilter = '전체';
 let currentTypeFilter = '전체';
 
 function openSaveModal() {
+  document.getElementById('author-select').innerHTML =
+    TEAM_MEMBERS.map(n => `<option value="${n}">${n}</option>`).join('');
+
   const names = [...new Set(scenarios.map(s => s.launchName).filter(Boolean))];
   const select = document.getElementById('launch-select');
   const newInput = document.getElementById('launch-new-input');
