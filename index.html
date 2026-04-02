@@ -841,7 +841,7 @@ const TEAM_MEMBERS = ['셀린', '노바', 'MJ', '테오', '아린'];
 // ===================== STATE =====================
 let simResult = {};
 let actualResult = {};
-let scenarios = JSON.parse(localStorage.getItem('rls_scenarios') || '[]');
+let scenarios = [];
 
 // ===================== TAB =====================
 function showTab(name) {
@@ -849,7 +849,7 @@ function showTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   event.target.classList.add('active');
-  if (name === 'scenarios') renderScenarios();
+  if (name === 'scenarios') loadScenariosFromFirestore();
 }
 
 // ===================== HELPERS =====================
@@ -1213,6 +1213,13 @@ function simActRow(label, sVal, aVal, unit='', higherBetter=true) {
   return `<tr><td>${label}</td><td>${fmt(sv,1)}${unit}</td><td>${fmt(av,1)}${unit}</td><td>${diffStr}</td></tr>`;
 }
 
+// ===================== FIRESTORE LOAD =====================
+async function loadScenariosFromFirestore() {
+  const snapshot = await db.collection('scenarios').orderBy('createdAt', 'desc').get();
+  scenarios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  renderScenarios();
+}
+
 // ===================== SCENARIOS =====================
 let savingActual = false;
 let currentLaunchFilter = '전체';
@@ -1571,6 +1578,7 @@ document.getElementById('modal').addEventListener('click', e => {
 // ===================== INIT =====================
 calcSim();
 calcActual();
+loadScenariosFromFirestore();
 </script>
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
