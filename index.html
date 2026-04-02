@@ -1311,16 +1311,17 @@ function setTypeFilter(type) {
   renderScenarios();
 }
 
-function deleteScenario(id) {
+async function deleteScenario(id) {
+  await db.collection('scenarios').doc(id).delete();
   scenarios = scenarios.filter(s => s.id !== id);
-  localStorage.setItem('rls_scenarios', JSON.stringify(scenarios));
   renderScenarios();
 }
 
-function clearScenarios() {
+async function clearScenarios() {
   if (!confirm('저장된 시나리오를 모두 삭제할까요?')) return;
+  const snapshot = await db.collection('scenarios').get();
+  await Promise.all(snapshot.docs.map(doc => doc.ref.delete()));
   scenarios = [];
-  localStorage.removeItem('rls_scenarios');
   renderScenarios();
 }
 
@@ -1484,7 +1485,7 @@ function renderScenarios() {
           </div>
           <div class="scenario-meta">${s.date} · 객단가 ${fmt(s.price)}만원</div>
         </div>
-        <button class="btn btn-danger btn-sm" onclick="deleteScenario(${s.id})">삭제</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteScenario('${s.id}')">삭제</button>
       </div>
       <div class="scenario-stats">
         <div class="scenario-stat">
@@ -1514,7 +1515,7 @@ function renderScenarios() {
         </div>
       </div>
       <div style="margin-top:12px; display:flex; gap:6px;">
-        ${s.isActual ? '' : `<button class="btn btn-secondary btn-sm" onclick="loadScenario(${s.id})">📥 불러오기</button>`}
+        ${s.isActual ? '' : `<button class="btn btn-secondary btn-sm" onclick="loadScenario('${s.id}')">📥 불러오기</button>`}
       </div>
     </div>`;
   }).join('')}</div>`;
