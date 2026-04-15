@@ -535,6 +535,21 @@
     }
     .empty-icon { font-size: 36px; margin-bottom: 12px; }
     .empty p { font-size: 14px; }
+    .loading-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--gray-400);
+      font-size: 13px;
+    }
+    .loading-spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Section header */
     .section-label {
@@ -1428,6 +1443,8 @@ function simActRow(label, sVal, aVal, unit='', higherBetter=true) {
 
 // ===================== FIRESTORE LOAD =====================
 async function loadScenariosFromFirestore() {
+  document.getElementById('scenario-list').innerHTML =
+    `<div class="loading-state"><div class="loading-spinner"></div>불러오는 중...</div>`;
   const snapshot = await db.collection('scenarios').orderBy('createdAt', 'desc').get();
   scenarios = snapshot.docs
     .map(doc => ({ id: doc.id, ...doc.data() }))
