@@ -882,7 +882,7 @@
     </div>
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <h2 style="font-size:16px; font-weight:700;">저장된 시나리오</h2>
-      <div style="display:flex; gap:8px;">
+      <div id="admin-delete-area" style="display:none; gap:8px;">
         <button id="btn-delete-selected" class="btn btn-warning btn-sm" onclick="deleteSelected()" style="display:none;">선택 삭제</button>
         <button class="btn btn-danger btn-sm" onclick="clearScenarios()">전체 삭제</button>
       </div>
@@ -978,6 +978,7 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 
 const ALLOWED_DOMAINS = ['liveklass.com', 'futureschole.com'];
+let isAdmin = false;
 
 // ===================== AUTH =====================
 async function signInWithGoogle() {
@@ -1023,6 +1024,11 @@ auth.onAuthStateChanged(async (user) => {
     await auth.signOut();
     return;
   }
+
+  // 관리자 여부 확인
+  const adminSnap = await db.collection('admins').doc(email).get();
+  isAdmin = adminSnap.exists;
+  document.getElementById('admin-delete-area').style.display = isAdmin ? 'flex' : 'none';
 
   // 인증 성공
   document.getElementById('auth-overlay').style.display = 'none';
@@ -1729,7 +1735,7 @@ function renderScenarios() {
           ${s.isActual ? '<span class="badge-actual">📊 실적</span>' : '<span class="badge-sim">📐 시뮬</span>'}
           ${s.author ? `<span class="badge-author">${s.author}</span>` : ''}
         </div>
-        <input type="checkbox" class="scenario-checkbox" onchange="toggleCardSelect('${s.id}', this.checked)">
+        ${isAdmin ? `<input type="checkbox" class="scenario-checkbox" onchange="toggleCardSelect('${s.id}', this.checked)">` : ''}
       </div>
       <div class="scenario-name">${s.name}</div>
       <div class="scenario-meta">${s.date} · 객단가 ${fmt(s.price)}만원</div>
