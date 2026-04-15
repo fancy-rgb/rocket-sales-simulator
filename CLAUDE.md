@@ -72,3 +72,36 @@
 - 애매하면 OTHER로 임시 분류 후 데이터 쌓이면 재분류
 
 > 드롭다운으로 입력 제한 필수 — 자유 텍스트 허용 시 MCP 읽기 오염 발생
+
+---
+
+## 보안 운영 가이드
+
+### 접근 제어 설계 (확정 — 2026-04-15)
+
+이 서비스는 **내부 전용**이다. 외부 접근을 허용할 이유가 없으므로 구글 로그인(Firebase Authentication)으로 접근을 제한한다.
+
+**허용 도메인**
+- `@liveklass.com`
+- `@futureschole.com`
+
+**차단 목록 관리 방식**
+- 앱 내 관리 UI 없음 — Firebase 콘솔에서 직접 관리
+- 이유: 퇴사자 처리는 연 1~3회 수준이므로 별도 UI를 만드는 것은 유지 비용이 더 크다
+
+---
+
+### 퇴사자 접근 차단 절차
+
+팀원이 퇴사하면 아래 절차를 따른다.
+
+1. [console.firebase.google.com](https://console.firebase.google.com) 접속
+2. 프로젝트 `rocket-simulator-f988e` 선택
+3. 좌측 메뉴 → **Firestore Database**
+4. `blocked_users` 컬렉션 → **문서 추가**
+5. 필드 입력:
+   - 필드명: `email`
+   - 값: 퇴사자 이메일 주소 (예: `hong@liveklass.com`)
+6. 저장 → 즉시 적용 (해당 계정은 다음 접속 시 자동 차단)
+
+> Firebase 콘솔 접근 권한이 없으면 개발자(태윤)에게 요청한다.
