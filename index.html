@@ -1028,11 +1028,10 @@ async function signInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   try {
-    document.getElementById('auth-error').textContent = '';
     await auth.signInWithPopup(provider);
   } catch (e) {
     if (e.code !== 'auth/popup-closed-by-user') {
-      document.getElementById('auth-error').textContent = '로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
+      showDeniedCard('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
     }
   }
 }
@@ -1086,6 +1085,7 @@ auth.onAuthStateChanged(async (user) => {
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('header-user').style.display = 'flex';
   document.getElementById('header-user-name').textContent = user.displayName || email;
+  loadScenariosFromFirestore();
 });
 
 
@@ -1900,7 +1900,6 @@ document.getElementById('modal').addEventListener('click', e => {
 // ===================== INIT =====================
 calcSim();
 calcActual();
-loadScenariosFromFirestore();
 </script>
 </body>
 </html>
