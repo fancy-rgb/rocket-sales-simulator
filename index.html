@@ -601,7 +601,7 @@
       <button class="tab" onclick="showTab('scenarios')">시나리오 비교</button>
     </nav>
     <div class="header-right">
-      <button class="version-badge" onclick="openChangelog()">v1.2.0</button>
+      <button class="version-badge" onclick="openChangelog()">v1.2.1</button>
       <div id="header-user" style="display:none; align-items:center; gap:8px;">
         <span class="header-user-name" id="header-user-name"></span>
         <button class="btn-signout" onclick="signOut()">로그아웃</button>
@@ -927,6 +927,12 @@
       <button class="btn btn-secondary btn-sm" onclick="closeChangelog()">닫기</button>
     </div>
     <div class="changelog-modal-body">
+      <h3>v1.2.1 — 2026-04-15</h3>
+      <h4>버그 수정</h4>
+      <ul>
+        <li>로그인 전 Firestore 접근 오류 수정</li>
+        <li>로그인 오류 메시지 null 참조 수정</li>
+      </ul>
       <h3>v1.2.0 — 2026-04-15</h3>
       <h4>보안</h4>
       <ul>

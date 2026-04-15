@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.2.1] — 2026-04-15
+
+### 버그 수정
+- 페이지 초기 로드 시 로그인 전 Firestore 접근으로 `Missing or insufficient permissions` 오류 발생 → 시나리오 로드를 인증 성공 후로 이동
+- `signInWithGoogle()`에서 제거된 `auth-error` 요소 참조로 `null textContent` 오류 발생 → `showDeniedCard()`로 대체
+
 ## [v1.2.0] — 2026-04-15
 
 ### 보안
