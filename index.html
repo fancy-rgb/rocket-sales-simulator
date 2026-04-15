@@ -927,6 +927,29 @@
       <button class="btn btn-secondary btn-sm" onclick="closeChangelog()">닫기</button>
     </div>
     <div class="changelog-modal-body">
+      <h3>v1.2.0 — 2026-04-15</h3>
+      <h4>보안</h4>
+      <ul>
+        <li>구글 로그인 기반 접근 제어 (Firebase Authentication)</li>
+        <li>허용 도메인 제한: @liveklass.com, @futureschole.com만 접속 가능</li>
+        <li>접근 불가 계정 로그인 시 전용 오류 화면 표시</li>
+        <li>Firestore Security Rules 강화</li>
+      </ul>
+      <h4>권한</h4>
+      <ul>
+        <li>관리자 계정 구분 — admins 등록 계정만 삭제 가능</li>
+        <li>비관리자는 저장·조회만 가능</li>
+      </ul>
+      <h4>데이터 보호</h4>
+      <ul>
+        <li>소프트 삭제: 삭제 시 복구 가능하도록 기록 보존</li>
+        <li>삭제자·삭제 시각 자동 기록</li>
+      </ul>
+      <h4>개선</h4>
+      <ul>
+        <li>작성자 드롭다운 → 로그인 계정 자동 연동</li>
+        <li>시나리오 탭 로딩 스피너 추가</li>
+      </ul>
       <h3>v1.1.0 — 2026-04-09</h3>
       <h4>추가</h4>
       <ul>
