@@ -556,7 +556,7 @@
 
 <!-- Auth Overlay -->
 <div id="auth-overlay" class="auth-overlay">
-  <div class="auth-card">
+  <div class="auth-card" id="auth-login-card">
     <div class="auth-logo">🚀 로켓런칭 시뮬레이터</div>
     <p class="auth-desc">라이브클래스 또는 퓨처스콜레 계정으로<br>로그인하세요</p>
     <button class="btn-google" onclick="signInWithGoogle()">
@@ -568,7 +568,12 @@
       </svg>
       Google 계정으로 로그인
     </button>
-    <div class="auth-error" id="auth-error"></div>
+  </div>
+  <div class="auth-card" id="auth-denied-card" style="display:none;">
+    <div style="font-size:36px; margin-bottom:12px;">🚫</div>
+    <div style="font-size:16px; font-weight:700; color:var(--gray-900); margin-bottom:10px;">접근 권한 없음</div>
+    <p class="auth-desc" id="auth-denied-message" style="color:var(--gray-700);"></p>
+    <button class="btn-google" onclick="showLoginCard()">다른 계정으로 시도</button>
   </div>
 </div>
 
@@ -998,6 +1003,17 @@ async function signOut() {
   await auth.signOut();
 }
 
+function showDeniedCard(message) {
+  document.getElementById('auth-login-card').style.display = 'none';
+  document.getElementById('auth-denied-card').style.display = 'block';
+  document.getElementById('auth-denied-message').textContent = message;
+}
+
+function showLoginCard() {
+  document.getElementById('auth-denied-card').style.display = 'none';
+  document.getElementById('auth-login-card').style.display = 'block';
+}
+
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
     document.getElementById('auth-overlay').style.display = 'flex';
@@ -1010,18 +1026,16 @@ auth.onAuthStateChanged(async (user) => {
 
   // 도메인 검증
   if (!ALLOWED_DOMAINS.includes(domain)) {
-    document.getElementById('auth-error').textContent =
-      `${email} 계정은 접근 권한이 없습니다.\n@liveklass.com 또는 @futureschole.com 계정으로 로그인하세요.`;
     await auth.signOut();
+    showDeniedCard(`${email} 계정은 접근 권한이 없습니다. @liveklass.com 또는 @futureschole.com 계정으로 로그인하세요.`);
     return;
   }
 
   // blocked_users 검증
   const blockedSnap = await db.collection('blocked_users').where('email', '==', email).limit(1).get();
   if (!blockedSnap.empty) {
-    document.getElementById('auth-error').textContent =
-      `${email} 계정의 접근이 차단되었습니다. 관리자에게 문의하세요.`;
     await auth.signOut();
+    showDeniedCard(`${email} 계정의 접근이 차단되었습니다. 담당자에게 문의하세요.`);
     return;
   }
 
