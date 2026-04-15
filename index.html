@@ -1429,7 +1429,9 @@ function simActRow(label, sVal, aVal, unit='', higherBetter=true) {
 // ===================== FIRESTORE LOAD =====================
 async function loadScenariosFromFirestore() {
   const snapshot = await db.collection('scenarios').orderBy('createdAt', 'desc').get();
-  scenarios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  scenarios = snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .filter(s => !s.deleted);
   renderScenarios();
 }
 
@@ -1555,25 +1557,35 @@ function toggleCardSelect(id, checked) {
   if (btn) btn.style.display = selectedScenarioIds.size > 0 ? '' : 'none';
 }
 
+function softDeleteData() {
+  const user = auth.currentUser;
+  return {
+    deleted: true,
+    deletedAt: Date.now(),
+    deletedBy: user ? user.email : 'unknown'
+  };
+}
+
 async function deleteSelected() {
   if (selectedScenarioIds.size === 0) return;
   if (!confirm(`선택한 ${selectedScenarioIds.size}개를 삭제할까요?`)) return;
-  await Promise.all([...selectedScenarioIds].map(id => db.collection('scenarios').doc(id).delete()));
+  const data = softDeleteData();
+  await Promise.all([...selectedScenarioIds].map(id => db.collection('scenarios').doc(id).update(data)));
   scenarios = scenarios.filter(s => !selectedScenarioIds.has(s.id));
   selectedScenarioIds.clear();
   renderScenarios();
 }
 
 async function deleteScenario(id) {
-  await db.collection('scenarios').doc(id).delete();
+  await db.collection('scenarios').doc(id).update(softDeleteData());
   scenarios = scenarios.filter(s => s.id !== id);
   renderScenarios();
 }
 
 async function clearScenarios() {
   if (!confirm('저장된 시나리오를 모두 삭제할까요?')) return;
-  const snapshot = await db.collection('scenarios').get();
-  await Promise.all(snapshot.docs.map(doc => doc.ref.delete()));
+  const data = softDeleteData();
+  await Promise.all(scenarios.map(s => db.collection('scenarios').doc(s.id).update(data)));
   scenarios = [];
   renderScenarios();
 }
