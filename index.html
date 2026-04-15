@@ -74,6 +74,47 @@
       transition: background .15s;
     }
     .version-badge:hover { background: var(--gray-200); color: var(--gray-700); }
+
+    /* Auth overlay */
+    .auth-overlay {
+      position: fixed; inset: 0;
+      background: var(--gray-100);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .auth-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px 32px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,.1);
+    }
+    .auth-card .auth-logo { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+    .auth-card .auth-desc { color: var(--gray-500); font-size: 13px; margin: 8px 0 24px; line-height: 1.6; }
+    .btn-google {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; width: 100%; padding: 12px 16px;
+      border: 1px solid var(--gray-200); border-radius: 10px;
+      background: #fff; cursor: pointer; font-size: 14px; font-weight: 500;
+      color: var(--gray-700); transition: background .15s;
+    }
+    .btn-google:hover { background: var(--gray-50); }
+    .auth-error { color: var(--red); font-size: 12px; margin-top: 14px; min-height: 16px; line-height: 1.5; }
+
+    /* Header user info */
+    .header-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .header-user-name { font-size: 12px; font-weight: 600; color: var(--gray-700); }
+    .btn-signout {
+      font-size: 11px; color: var(--gray-500); background: none;
+      border: 1px solid var(--gray-200); border-radius: 6px;
+      padding: 3px 8px; cursor: pointer; transition: background .15s;
+    }
+    .btn-signout:hover { background: var(--gray-100); color: var(--gray-700); }
+
     .changelog-modal-body { font-size: 13px; line-height: 1.7; max-height: 60vh; overflow-y: auto; }
     .changelog-modal-body h3 { font-size: 14px; font-weight: 700; margin: 16px 0 6px; color: var(--primary); }
     .changelog-modal-body h3:first-child { margin-top: 0; }
@@ -513,6 +554,24 @@
 </head>
 <body>
 
+<!-- Auth Overlay -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">🚀 로켓런칭 시뮬레이터</div>
+    <p class="auth-desc">라이브클래스 또는 퓨처스콜레 계정으로<br>로그인하세요</p>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.706 17.64 9.2z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+        <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Google 계정으로 로그인
+    </button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
 <header class="header">
   <div class="header-inner">
     <div class="logo">🚀 로켓런칭 시뮬레이터</div>
@@ -521,7 +580,13 @@
       <button class="tab" onclick="showTab('actual')">실적 입력</button>
       <button class="tab" onclick="showTab('scenarios')">시나리오 비교</button>
     </nav>
-    <button class="version-badge" onclick="openChangelog()">v1.1.0</button>
+    <div class="header-right">
+      <button class="version-badge" onclick="openChangelog()">v1.2.0</button>
+      <div id="header-user" style="display:none; align-items:center; gap:8px;">
+        <span class="header-user-name" id="header-user-name"></span>
+        <button class="btn-signout" onclick="signOut()">로그아웃</button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -896,6 +961,7 @@
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <script>
 // ===================== FIREBASE =====================
@@ -909,6 +975,60 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+
+const ALLOWED_DOMAINS = ['liveklass.com', 'futureschole.com'];
+
+// ===================== AUTH =====================
+async function signInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  try {
+    document.getElementById('auth-error').textContent = '';
+    await auth.signInWithPopup(provider);
+  } catch (e) {
+    if (e.code !== 'auth/popup-closed-by-user') {
+      document.getElementById('auth-error').textContent = '로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
+    }
+  }
+}
+
+async function signOut() {
+  await auth.signOut();
+}
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    document.getElementById('auth-overlay').style.display = 'flex';
+    document.getElementById('header-user').style.display = 'none';
+    return;
+  }
+
+  const email = user.email || '';
+  const domain = email.split('@')[1] || '';
+
+  // 도메인 검증
+  if (!ALLOWED_DOMAINS.includes(domain)) {
+    document.getElementById('auth-error').textContent =
+      `${email} 계정은 접근 권한이 없습니다.\n@liveklass.com 또는 @futureschole.com 계정으로 로그인하세요.`;
+    await auth.signOut();
+    return;
+  }
+
+  // blocked_users 검증
+  const blockedSnap = await db.collection('blocked_users').where('email', '==', email).limit(1).get();
+  if (!blockedSnap.empty) {
+    document.getElementById('auth-error').textContent =
+      `${email} 계정의 접근이 차단되었습니다. 관리자에게 문의하세요.`;
+    await auth.signOut();
+    return;
+  }
+
+  // 인증 성공
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('header-user').style.display = 'flex';
+  document.getElementById('header-user-name').textContent = user.displayName || email;
+});
 
 // 팀원 목록
 const TEAM_MEMBERS = ['셀린', '노바', 'MJ', '테오', '아린'];

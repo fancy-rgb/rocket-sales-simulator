@@ -1,5 +1,14 @@
 # Changelog
 
+## [v1.2.0] — 2026-04-15
+
+### 보안
+- 구글 로그인 기반 접근 제어 추가 (Firebase Authentication)
+- 허용 도메인 제한: @liveklass.com, @futureschole.com 계정만 접속 가능
+- 차단 목록(blocked_users) 연동: Firestore에 등록된 계정 즉시 차단
+- 미인증 상태에서 앱 전체 차단 (로그인 오버레이)
+- 헤더에 로그인 계정 표시 이름 + 로그아웃 버튼 추가
+
 ## [v1.1.0] — 2026-04-09
 
 ### 추가
