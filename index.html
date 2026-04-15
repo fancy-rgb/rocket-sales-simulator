@@ -949,7 +949,7 @@
     </div>
     <div class="field" style="margin-top:12px;">
       <label>작성자</label>
-      <select id="author-select" class="modal-select"></select>
+      <div id="author-display" style="font-size:13px; color:var(--gray-700); padding:8px 0;"></div>
     </div>
     <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
       <button class="btn btn-secondary" onclick="closeModal()">취소</button>
@@ -1030,8 +1030,6 @@ auth.onAuthStateChanged(async (user) => {
   document.getElementById('header-user-name').textContent = user.displayName || email;
 });
 
-// 팀원 목록
-const TEAM_MEMBERS = ['셀린', '노바', 'MJ', '테오', '아린'];
 
 // ===================== STATE =====================
 let simResult = {};
@@ -1420,12 +1418,10 @@ let savingActual = false;
 let currentLaunchFilter = '전체';
 let currentTypeFilter = '전체';
 let currentAuthorFilter = '전체';
-let lastSelectedAuthor = localStorage.getItem('lastSelectedAuthor') || '';
 
 function openSaveModal() {
-  document.getElementById('author-select').innerHTML =
-    TEAM_MEMBERS.map(n => `<option value="${n}">${n}</option>`).join('');
-  if (lastSelectedAuthor) document.getElementById('author-select').value = lastSelectedAuthor;
+  const user = auth.currentUser;
+  document.getElementById('author-display').textContent = user ? (user.displayName || user.email) : '';
 
   const names = [...new Set(scenarios.map(s => s.launchName).filter(Boolean))];
   const select = document.getElementById('launch-select');
@@ -1499,9 +1495,8 @@ async function confirmSave() {
   }
   if (!launchName) { alert('런칭명을 입력해주세요.'); return; }
 
-  const author = document.getElementById('author-select').value;
-  lastSelectedAuthor = author;
-  localStorage.setItem('lastSelectedAuthor', author);
+  const user = auth.currentUser;
+  const author = user ? (user.displayName || user.email) : '';
   const data = savingActual ? { ...actualResult, isActual: true } : { ...simResult, isActual: false };
   const docData = { name: launchName, launchName, author, date: new Date().toLocaleDateString('ko'), createdAt: Date.now(), ...data };
 
