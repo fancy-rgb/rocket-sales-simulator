@@ -601,7 +601,7 @@
       <button class="tab" onclick="showTab('scenarios')">시나리오 비교</button>
     </nav>
     <div class="header-right">
-      <button class="version-badge" onclick="openChangelog()">v1.2.1</button>
+      <button class="version-badge" onclick="openChangelog()">v1.3.0</button>
       <div id="header-user" style="display:none; align-items:center; gap:8px;">
         <span class="header-user-name" id="header-user-name"></span>
         <button class="btn-signout" onclick="signOut()">로그아웃</button>
@@ -927,6 +927,12 @@
       <button class="btn btn-secondary btn-sm" onclick="closeChangelog()">닫기</button>
     </div>
     <div class="changelog-modal-body">
+      <h3>v1.3.0 — 2026-04-22</h3>
+      <h4>인프라</h4>
+      <ul>
+        <li>Firebase 프로젝트 통합 — rocket-launch-489213로 이전 (dashboard·guide와 인증 풀 공유)</li>
+        <li>기존 저장된 시나리오는 초기화됨 (팀원 재로그인 필요)</li>
+      </ul>
       <h3>v1.2.1 — 2026-04-15</h3>
       <h4>버그 수정</h4>
       <ul>
@@ -1015,12 +1021,13 @@
 <script>
 // ===================== FIREBASE =====================
 const firebaseConfig = {
-  apiKey: "AIzaSyDgIdAZ-h8WvRzcZK4IKkDr1wqZnB8EkXw",
-  authDomain: "rocket-simulator-f988e.firebaseapp.com",
-  projectId: "rocket-simulator-f988e",
-  storageBucket: "rocket-simulator-f988e.firebasestorage.app",
-  messagingSenderId: "163001247771",
-  appId: "1:163001247771:web:729ed3949c046f308db0be"
+  apiKey: "AIzaSyB7vShchYS6M5VUvOxbbwhJLRru8lbmiHg",
+  authDomain: "rocket-launch-489213.firebaseapp.com",
+  projectId: "rocket-launch-489213",
+  storageBucket: "rocket-launch-489213.firebasestorage.app",
+  messagingSenderId: "887078227984",
+  appId: "1:887078227984:web:fbf7c94198a3b1c065fa95",
+  measurementId: "G-WF30MWNBFH"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();

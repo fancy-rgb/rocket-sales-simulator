@@ -1,5 +1,18 @@
 # Changelog
 
+## [v1.3.0] — 2026-04-22
+
+### 인프라
+- **Firebase 프로젝트 통합**: `rocket-simulator-f988e` → `rocket-launch-489213`으로 이전
+  - dashboard·guide와 같은 Firebase 프로젝트를 공유하여 `admins`·`blocked_users` 단일 소스로 관리
+  - 퇴사자 차단·관리자 추가 시 한 곳만 수정하면 세 서비스 모두 즉시 반영
+- **기존 저장 시나리오 초기화**: `scenarios` 컬렉션은 이전되지 않음 (팀원 재로그인 + 시나리오 재생성 필요)
+- 구 프로젝트(`rocket-simulator-f988e`)는 30일간 보관 후 삭제 예정
+
+### 운영
+- 호스팅은 GitHub Pages 유지 (URL 변경 없음: `fancy-rgb.github.io/rocket-sales-simulator`)
+- 팀원은 이전 세션 로그아웃 + 새 프로젝트로 재로그인 필요
+
 ## [v1.2.1] — 2026-04-15
 
 ### 버그 수정

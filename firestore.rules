@@ -1,0 +1,70 @@
+rules_version = '2';
+
+// rocket-sales-simulator — Firestore Security Rules
+// 적용 대상 프로젝트: rocket-launch-489213 (통합 프로젝트)
+// 적용 방법: Firebase Console → Firestore Database → 규칙(Rules) 탭에 붙여넣고 "게시"
+//
+// 허용 도메인: @liveklass.com, @futureschole.com
+// 관리자 판별: admins 컬렉션에 이메일 문서가 존재하는 경우
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------- 공통 헬퍼 함수 ---------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAllowedDomain() {
+      return isSignedIn() &&
+        (request.auth.token.email.matches('.*@liveklass\\.com') ||
+         request.auth.token.email.matches('.*@futureschole\\.com'));
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    function isNotBlocked() {
+      return isSignedIn() &&
+        !exists(/databases/$(database)/documents/blocked_users/$(request.auth.token.email));
+      // NOTE: blocked_users는 이메일을 where 쿼리로 찾는 구조이나,
+      // 문서 ID도 이메일과 동일하게 저장하면 이 규칙이 동작한다.
+      // Phase 2-4에서 수동 재입력 시 문서 ID = 이메일로 등록.
+    }
+
+    function canUseApp() {
+      return isAllowedDomain() && isNotBlocked();
+    }
+
+    // --------- admins 컬렉션 ---------
+    // 관리자 이메일 목록. 읽기만 허용, 쓰기는 Firebase Console에서 직접.
+    match /admins/{email} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // --------- blocked_users 컬렉션 ---------
+    // 퇴사자·차단 목록. 읽기만 허용, 쓰기는 Firebase Console에서 직접.
+    match /blocked_users/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // --------- scenarios 컬렉션 ---------
+    // 시나리오 저장. 허용 도메인 + 미차단 계정만 읽기·생성·업데이트.
+    // 하드 삭제(delete)는 금지 — 삭제는 update로 deleted: true 플래그 처리(소프트 삭제).
+    match /scenarios/{docId} {
+      allow read: if canUseApp();
+      allow create: if canUseApp();
+      allow update: if canUseApp();
+      allow delete: if false;
+    }
+
+    // --------- 기본: 그 외 모든 경로 거부 ---------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
