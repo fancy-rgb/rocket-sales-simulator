@@ -21,7 +21,7 @@ const DRY_RUN = process.argv.includes('--dry-run')
 if (DRY_RUN) console.log('=== DRY RUN 모드 (실제 데이터 변경 없음) ===\n')
 
 // Firebase 초기화 (rocket-launch-automation의 서비스 계정 재사용)
-const SERVICE_ACCOUNT_PATH = resolve(__dirname, '../service-account-simulator.json')
+const SERVICE_ACCOUNT_PATH = resolve(__dirname, '../service-account-launch.json')
 const serviceAccount = JSON.parse(readFileSync(SERVICE_ACCOUNT_PATH, 'utf-8'))
 initializeApp({ credential: cert(serviceAccount) })
 const db = getFirestore()
