@@ -25,6 +25,7 @@
 - [x] GitHub 레포 생성 및 연결
 - [x] GitHub Pages 배포
 - [x] v1.2.0 보안 업그레이드 (Firebase Auth + 접근 제어 + 소프트 삭제)
+- [x] v2.0.0 Supabase 이전 완료 (Auth + Postgres, 2026-05-13)
 
 ## 다음 단계
 
