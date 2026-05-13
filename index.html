@@ -1013,44 +1013,29 @@
   </div>
 </div>
 
-<!-- Firebase SDK (compat) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <script>
-// ===================== FIREBASE =====================
-const firebaseConfig = {
-  apiKey: "AIzaSyB7vShchYS6M5VUvOxbbwhJLRru8lbmiHg",
-  authDomain: "rocket-launch-489213.firebaseapp.com",
-  projectId: "rocket-launch-489213",
-  storageBucket: "rocket-launch-489213.firebasestorage.app",
-  messagingSenderId: "887078227984",
-  appId: "1:887078227984:web:fbf7c94198a3b1c065fa95",
-  measurementId: "G-WF30MWNBFH"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
+// ===================== SUPABASE =====================
+const SUPABASE_URL = 'https://mlykalmpqalxhwrfoaow.supabase.co'
+const SUPABASE_ANON_KEY = 'sb_publishable_Hk-x0XMM0nDcXKkp5sEdPA_hy3DTs0n'
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-const ALLOWED_DOMAINS = ['liveklass.com', 'futureschole.com'];
 let isAdmin = false;
+let currentUser = null;
 
 // ===================== AUTH =====================
 async function signInWithGoogle() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
-  try {
-    await auth.signInWithPopup(provider);
-  } catch (e) {
-    if (e.code !== 'auth/popup-closed-by-user') {
-      showDeniedCard('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
-    }
-  }
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+  if (error) showDeniedCard('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
 }
 
 async function signOut() {
-  await auth.signOut();
+  await supabaseClient.auth.signOut();
 }
 
 function showDeniedCard(message) {
@@ -1064,41 +1049,48 @@ function showLoginCard() {
   document.getElementById('auth-login-card').style.display = 'block';
 }
 
-auth.onAuthStateChanged(async (user) => {
+async function handleUser(user) {
   if (!user) {
+    currentUser = null;
+    isAdmin = false;
     document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('header-user').style.display = 'none';
     return;
   }
 
   const email = user.email || '';
-  const domain = email.split('@')[1] || '';
 
-  // 도메인 검증
-  if (!ALLOWED_DOMAINS.includes(domain)) {
-    await auth.signOut();
-    showDeniedCard(`${email} 계정은 접근 권한이 없습니다. @liveklass.com 또는 @futureschole.com 계정으로 로그인하세요.`);
-    return;
-  }
-
-  // blocked_users 검증
-  const blockedSnap = await db.collection('blocked_users').where('email', '==', email).limit(1).get();
-  if (!blockedSnap.empty) {
-    await auth.signOut();
+  // blocked_users 검증 (도메인 제한은 DB trigger로 처리됨)
+  const { data: blocked } = await supabaseClient
+    .from('blocked_users').select('email').eq('email', email).limit(1);
+  if (blocked && blocked.length > 0) {
+    await supabaseClient.auth.signOut();
     showDeniedCard(`${email} 계정의 접근이 차단되었습니다. 담당자에게 문의하세요.`);
     return;
   }
 
   // 관리자 여부 확인
-  const adminSnap = await db.collection('admins').doc(email).get();
-  isAdmin = adminSnap.exists;
+  const { data: adminRow } = await supabaseClient
+    .from('admins').select('email').eq('email', email).limit(1);
+  isAdmin = !!(adminRow && adminRow.length > 0);
+  currentUser = user;
   document.getElementById('admin-delete-area').style.display = isAdmin ? 'flex' : 'none';
 
   // 인증 성공
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('header-user').style.display = 'flex';
-  document.getElementById('header-user-name').textContent = user.displayName || email;
-  loadScenariosFromFirestore();
+  document.getElementById('header-user-name').textContent = user.user_metadata?.full_name || email;
+  loadScenariosFromSupabase();
+}
+
+// 페이지 로드 시 기존 세션 확인
+supabaseClient.auth.getSession().then(({ data: { session } }) => {
+  handleUser(session?.user ?? null);
+});
+
+// 로그인/로그아웃 이벤트 감지
+supabaseClient.auth.onAuthStateChange((_event, session) => {
+  handleUser(session?.user ?? null);
 });
 
 
@@ -1113,7 +1105,7 @@ function showTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   event.target.classList.add('active');
-  if (name === 'scenarios') loadScenariosFromFirestore();
+  if (name === 'scenarios') loadScenariosFromSupabase();
 }
 
 // ===================== HELPERS =====================
@@ -1478,13 +1470,25 @@ function simActRow(label, sVal, aVal, unit='', higherBetter=true) {
 }
 
 // ===================== FIRESTORE LOAD =====================
-async function loadScenariosFromFirestore() {
+async function loadScenariosFromSupabase() {
   document.getElementById('scenario-list').innerHTML =
     `<div class="loading-state"><div class="loading-spinner"></div>불러오는 중...</div>`;
-  const snapshot = await db.collection('scenarios').orderBy('createdAt', 'desc').get();
-  scenarios = snapshot.docs
-    .map(doc => ({ id: doc.id, ...doc.data() }))
-    .filter(s => !s.deleted);
+  const { data, error } = await supabaseClient
+    .from('scenarios')
+    .select('*')
+    .eq('deleted', false)
+    .order('created_at', { ascending: false });
+  if (error) { console.error('loadScenarios error', error); renderScenarios(); return; }
+  scenarios = (data || []).map(row => ({
+    id: row.id,
+    name: row.name,
+    launchName: row.launch_name,
+    author: row.author,
+    date: row.date,
+    isActual: row.is_actual,
+    createdAt: row.created_at,
+    ...row.params
+  }));
   renderScenarios();
 }
 
@@ -1495,8 +1499,8 @@ let currentTypeFilter = '전체';
 let currentAuthorFilter = '전체';
 
 function openSaveModal() {
-  const user = auth.currentUser;
-  document.getElementById('author-display').textContent = user ? (user.displayName || user.email) : '';
+  const user = currentUser;
+  document.getElementById('author-display').textContent = user ? (user.user_metadata?.full_name || user.email) : '';
 
   const names = [...new Set(scenarios.map(s => s.launchName).filter(Boolean))];
   const select = document.getElementById('launch-select');
@@ -1570,13 +1574,23 @@ async function confirmSave() {
   }
   if (!launchName) { alert('런칭명을 입력해주세요.'); return; }
 
-  const user = auth.currentUser;
-  const author = user ? (user.displayName || user.email) : '';
-  const data = savingActual ? { ...actualResult, isActual: true } : { ...simResult, isActual: false };
-  const docData = { name: launchName, launchName, author, date: new Date().toLocaleDateString('ko'), createdAt: Date.now(), ...data };
+  const user = currentUser;
+  const author = user ? (user.user_metadata?.full_name || user.email) : '';
+  const simData = savingActual ? { ...actualResult } : { ...simResult };
+  const { price, cap, fee, adcost, cac, organic, attendRate, ftRate, cvr, ...restParams } = simData;
+  const row = {
+    name: launchName,
+    launch_name: launchName,
+    author,
+    date: new Date().toLocaleDateString('ko'),
+    is_actual: !!savingActual,
+    params: simData,
+    deleted: false
+  };
 
-  const docRef = await db.collection('scenarios').add(docData);
-  scenarios.push({ id: docRef.id, ...docData });
+  const { data: inserted, error } = await supabaseClient.from('scenarios').insert(row).select('id').single();
+  if (error) { alert('저장에 실패했습니다.'); console.error(error); return; }
+  scenarios.unshift({ id: inserted.id, name: launchName, launchName, author, date: row.date, isActual: row.is_actual, ...simData });
   closeModal();
   showToast(savingActual ? '실적이 저장되었습니다.' : '시나리오가 저장되었습니다.');
 }
@@ -1611,11 +1625,10 @@ function toggleCardSelect(id, checked) {
 }
 
 function softDeleteData() {
-  const user = auth.currentUser;
   return {
     deleted: true,
-    deletedAt: Date.now(),
-    deletedBy: user ? user.email : 'unknown'
+    deleted_at: new Date().toISOString(),
+    deleted_by: currentUser ? currentUser.email : 'unknown'
   };
 }
 
@@ -1623,14 +1636,16 @@ async function deleteSelected() {
   if (selectedScenarioIds.size === 0) return;
   if (!confirm(`선택한 ${selectedScenarioIds.size}개를 삭제할까요?`)) return;
   const data = softDeleteData();
-  await Promise.all([...selectedScenarioIds].map(id => db.collection('scenarios').doc(id).update(data)));
+  await Promise.all([...selectedScenarioIds].map(id =>
+    supabaseClient.from('scenarios').update(data).eq('id', id)
+  ));
   scenarios = scenarios.filter(s => !selectedScenarioIds.has(s.id));
   selectedScenarioIds.clear();
   renderScenarios();
 }
 
 async function deleteScenario(id) {
-  await db.collection('scenarios').doc(id).update(softDeleteData());
+  await supabaseClient.from('scenarios').update(softDeleteData()).eq('id', id);
   scenarios = scenarios.filter(s => s.id !== id);
   renderScenarios();
 }
@@ -1638,7 +1653,9 @@ async function deleteScenario(id) {
 async function clearScenarios() {
   if (!confirm('저장된 시나리오를 모두 삭제할까요?')) return;
   const data = softDeleteData();
-  await Promise.all(scenarios.map(s => db.collection('scenarios').doc(s.id).update(data)));
+  await Promise.all(scenarios.map(s =>
+    supabaseClient.from('scenarios').update(data).eq('id', s.id)
+  ));
   scenarios = [];
   renderScenarios();
 }
