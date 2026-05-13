@@ -1,4 +1,5 @@
 .superpowers/
 .env.migration
+service-account-simulator.json
 node_modules/
 package-lock.json
