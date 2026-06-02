@@ -6,7 +6,7 @@
 
 **Architecture:** 단일 HTML 파일. `<style>`(7~568)에 `:root` 토큰 추가 + 컴포넌트 CSS 교체. JS 렌더 함수(`funnelHTML`·`calcSim` 결과 템플릿·`renderScenarios`·`hbarChart`)의 **반환 마크업만** 교체. 계산 수식·핸들러·Supabase·DOM 컨테이너 ID는 손대지 않는다.
 
-**Tech Stack:** Vanilla HTML/CSS/JS, Supabase(불변), 검증 = Playwright 로컬 캡처(`/tmp/sim_capture.py`).
+**Tech Stack:** Vanilla HTML/CSS/JS, Supabase(불변), 검증 = Playwright 로컬 캡처(`.dev/sim_capture.py`).
 
 **Design SoT:** spec `docs/superpowers/specs/2026-06-02-simulator-ux-visual-refresh-design.md` + 승인 목업 `.superpowers/brainstorm/74639-1780390363/content/{funnel-polished,outcome-funnel,scenario-compare}.html` (CSS 정밀 참조용. gitignore 대상이므로 본 계획의 코드가 1차 기준).
 
@@ -29,13 +29,13 @@
 
 ## Task 0: 캡처 하니스 baseline 확보
 
-**Files:** Create `/tmp/sim_capture.py` (이미 존재 시 재사용)
+**Files:** Create `.dev/sim_capture.py` (이미 존재 시 재사용)
 
 - [ ] **Step 1: baseline 캡처 실행**
 
-`/tmp/sim_capture.py`는 인증 오버레이 제거 + 가짜 시나리오 주입 후 3탭을 캡처한다(이미 작성됨). 실행:
+`.dev/sim_capture.py`는 인증 오버레이 제거 + 가짜 시나리오 주입 후 3탭을 캡처한다(이미 작성됨). 실행:
 
-Run: `python3 /tmp/sim_capture.py && cp -r /tmp/sim-capture /tmp/sim-baseline`
+Run: `python3 .dev/sim_capture.py && cp -r /tmp/sim-capture /tmp/sim-baseline`
 Expected: `/tmp/sim-baseline/{1-sim,2-actual,3-scenarios}.png` 생성
 
 - [ ] **Step 2: baseline 육안 확인**
@@ -70,7 +70,7 @@ Expected: `/tmp/sim-baseline/{1-sim,2-actual,3-scenarios}.png` 생성
 ```
 
 - [ ] **Step 3: 캡처로 글로벌 룩 확인**
-Run: `python3 /tmp/sim_capture.py`
+Run: `python3 .dev/sim_capture.py`
 Expected: 3탭 배경이 라벤더 그라디언트 + 카드가 글래스 톤. 레이아웃 깨짐 없음.
 
 - [ ] **Step 4: Commit**
@@ -121,7 +121,7 @@ function funnelHTML(steps){
 ```
 
 - [ ] **Step 3: 캡처 — 시뮬·실적 퍼널 둘 다 확인**
-Run: `python3 /tmp/sim_capture.py`
+Run: `python3 .dev/sim_capture.py`
 Expected: `1-sim.png`·`2-actual.png` 퍼널이 가로 막대, 이탈/빨강 없음, 마지막 막대 초록. (실적은 0값이라 막대 짧음 — 정상)
 
 - [ ] **Step 4: Commit**
@@ -163,7 +163,7 @@ Run: `grep -n "거래액" index.html`
 Expected: hero(신규) + 매출흐름 워터폴 "거래액" 행만 남음. 기존 KPI "거래액" 카드 1곳 삭제됨(공헌이익·예상정산 카드는 유지).
 
 - [ ] **Step 4: 캡처 + 계산 무결성**
-Run: `python3 /tmp/sim_capture.py`
+Run: `python3 .dev/sim_capture.py`
 Expected: `1-sim.png` 결과 상단에 거래액 강조 카드, 숫자값이 baseline과 동일(계산 불변).
 
 - [ ] **Step 5: Commit**
@@ -196,7 +196,7 @@ git commit -m "style(result): 거래액 분석톤 강조 영역 추가 + KPI 거
 ```
 
 - [ ] **Step 3: 캡처 + 필터/불러오기 동작 확인**
-Run: `python3 /tmp/sim_capture.py`
+Run: `python3 .dev/sim_capture.py`
 Expected: `3-scenarios.png` 필터 1줄, 카드 글래스. (불러오기 버튼 존재 확인 — 마크업 유지)
 
 - [ ] **Step 4: Commit**
@@ -238,7 +238,7 @@ const cells = vals.map((val,i)=>{
 
 - [ ] **Step 3: 캡처 + worst 잔존 확인**
 Run: `grep -n "worst" index.html` → Expected: 0건
-Run: `python3 /tmp/sim_capture.py`
+Run: `python3 .dev/sim_capture.py`
 Expected: `3-scenarios.png` 비교표에 빨강 없음, 최고값 ★, 셀마다 보라 막대, 실적 열 파란 음영.
 
 - [ ] **Step 4: Commit**
@@ -281,7 +281,7 @@ function hbarChart(items){
 ```
 
 - [ ] **Step 3: 캡처 — 시뮬vs실적 뷰**
-`/tmp/sim_capture.py`에 런칭 필터 캡처 추가가 필요(현재 '전체'라 차트 미표시). 임시로 캡처 스크립트의 MOCK 뒤에 `currentLaunchFilter='A런칭'` 설정한 4번째 캡처를 추가하거나, 실행 중 `setLaunchFilter('A런칭')` 호출 후 캡처.
+`.dev/sim_capture.py`에 런칭 필터 캡처 추가가 필요(현재 '전체'라 차트 미표시). 임시로 캡처 스크립트의 MOCK 뒤에 `currentLaunchFilter='A런칭'` 설정한 4번째 캡처를 추가하거나, 실행 중 `setLaunchFilter('A런칭')` 호출 후 캡처.
 Run: 수정한 캡처 스크립트 실행
 Expected: 시뮬(보라)/실적(파랑) 막대쌍 + "목표 대비 N%" 병기, 빨강 경보 없음.
 
@@ -327,7 +327,7 @@ git commit -m "style(sim-vs-actual): 토큰 색 정합 + 목표 대비 달성도
 ```
 
 - [ ] **Step 4: 최종 회귀 — baseline 대비 3탭 + 기능**
-Run: `python3 /tmp/sim_capture.py`
+Run: `python3 .dev/sim_capture.py`
 Expected: 3탭 모두 새 디자인. baseline(`/tmp/sim-baseline`)과 비교해 **숫자값 동일**(계산 불변), 레이아웃 정상.
 수동 점검 항목(배포 후, CLAUDE.md "배포 후 검증" 재사용): 로그인 → 입력 → 계산 → 저장 → 불러오기 → 삭제 → 필터.
 
