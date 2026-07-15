@@ -1,85 +1,78 @@
-from benchmarks_agg import mix_bucket, compute, MIX_LOW, MIX_HIGH, FALLBACK_N
-
-
-def test_mix_bucket_boundaries():
-    assert mix_bucket(0.50) == 'low'
-    assert mix_bucket(0.8199) == 'low'
-    assert mix_bucket(0.82) == 'mid'      # 경계 포함: [0.82, 0.91]
-    assert mix_bucket(0.91) == 'mid'
-    assert mix_bucket(0.9101) == 'high'
-    assert mix_bucket(1.00) == 'high'
+from benchmarks_agg import compute, FALLBACK_N
 
 
 def _rows():
-    # 업종 A: 12건(충분) — attend/cvr 계산 가능
+    # 업종 A: 12건(충분) — attend 0.4, cvr 0.10
     rows = []
     for i in range(12):
-        rows.append({
-            'industry': 'A', 'registrants': 100, 'ad_registrants': 50,  # 유료비중 0.5 → low
-            'attendees': 40, 'buyers': 4,                               # attend 0.4, cvr 0.10
-        })
-    # 업종 B: 3건(부족 <10) → fallback 처리 대상
+        rows.append({'industry': 'A', 'registrants': 100, 'ad_registrants': 50,
+                     'attendees': 40, 'buyers': 4})
+    # 업종 B: 3건(부족 <10) → fallback 대상. cvr 0.05, attend 0.2
     for i in range(3):
-        rows.append({
-            'industry': 'B', 'registrants': 100, 'ad_registrants': 95,  # 유료비중 0.95 → high
-            'attendees': 20, 'buyers': 1,
-        })
-    # 업종 null: 2건 — 업종 집계 제외, '전체'에는 포함
+        rows.append({'industry': 'B', 'registrants': 100, 'ad_registrants': 95,
+                     'attendees': 20, 'buyers': 1})
+    # 업종 null: 2건 — 업종 집계 제외, '전체'에는 포함. cvr 0.06, attend 0.5
     for i in range(2):
-        rows.append({
-            'industry': None, 'registrants': 100, 'ad_registrants': 90,
-            'attendees': 50, 'buyers': 3,
-        })
-    # 업종 C: 2건(부족 <10) — high 구간, cvr 0.20 (B의 0.05과 다름 → pool 이동 유도)
+        rows.append({'industry': None, 'registrants': 100, 'ad_registrants': 90,
+                     'attendees': 50, 'buyers': 3})
+    # 업종 C: 2건(부족 <10) — cvr 0.20 (전체 pool을 B raw와 다르게 이동시킴), attend 0.4
     for i in range(2):
-        rows.append({
-            'industry': 'C', 'registrants': 100, 'ad_registrants': 96,  # 유료비중 0.96 → high
-            'attendees': 40, 'buyers': 8,                                # attend 0.4, cvr 0.20
-        })
+        rows.append({'industry': 'C', 'registrants': 100, 'ad_registrants': 96,
+                     'attendees': 40, 'buyers': 8})
     return rows
 
 
-def test_compute_produces_attend_and_cvr_and_total():
+# 전체 cvr pool = A(12×0.10)+B(3×0.05)+null(2×0.06)+C(2×0.20) = 1.87/19
+TOTAL_CVR = 1.87 / 19
+# 전체 attend pool = A(12×0.4)+B(3×0.2)+null(2×0.5)+C(2×0.4) = 7.2/19
+TOTAL_ATTEND = 7.2 / 19
+
+
+def test_all_records_have_null_mix_bucket():
+    # B안: mix_bucket 분할 폐지 — 모든 레코드 mix_bucket=None
     recs = compute(_rows())
-    keys = {(r['industry'], r['mix_bucket'], r['metric']) for r in recs}
+    assert recs
+    assert all(r['mix_bucket'] is None for r in recs)
 
-    # 업종 A attend_rate (mix_bucket=None)
+
+def test_per_industry_attend_and_cvr():
+    recs = compute(_rows())
+    # 업종 A: 충분 표본 → 실측(비fallback)
     a_attend = next(r for r in recs if r['industry'] == 'A' and r['metric'] == 'attend_rate')
-    assert a_attend['mix_bucket'] is None
-    assert a_attend['n'] == 12
-    assert abs(a_attend['mean'] - 0.40) < 1e-9
-    assert a_attend['is_fallback'] is False
+    assert a_attend['n'] == 12 and abs(a_attend['mean'] - 0.40) < 1e-9 and a_attend['is_fallback'] is False
+    a_cvr = next(r for r in recs if r['industry'] == 'A' and r['metric'] == 'buy_cvr')
+    assert a_cvr['n'] == 12 and abs(a_cvr['mean'] - 0.10) < 1e-9 and a_cvr['is_fallback'] is False
+    # 업종당 buy_cvr 레코드는 정확히 1개(구간 분할 없음)
+    a_cvr_recs = [r for r in recs if r['industry'] == 'A' and r['metric'] == 'buy_cvr']
+    assert len(a_cvr_recs) == 1
 
-    # 업종 A buy_cvr는 mix_bucket별 — 모두 low 구간이므로 low에 12건
-    a_cvr_low = next(r for r in recs if r['industry'] == 'A' and r['metric'] == 'buy_cvr' and r['mix_bucket'] == 'low')
-    assert a_cvr_low['n'] == 12
-    assert abs(a_cvr_low['mean'] - 0.10) < 1e-9
 
-    # '전체' pooled attend_rate 존재 (null 업종 포함 → 총 19건)
+def test_total_pooled_counts():
+    recs = compute(_rows())
     total_attend = next(r for r in recs if r['industry'] == '전체' and r['metric'] == 'attend_rate')
-    assert total_attend['n'] == 19
+    total_cvr = next(r for r in recs if r['industry'] == '전체' and r['metric'] == 'buy_cvr')
+    assert total_attend['n'] == 19 and abs(total_attend['mean'] - TOTAL_ATTEND) < 1e-9
+    assert total_cvr['n'] == 19 and abs(total_cvr['mean'] - TOTAL_CVR) < 1e-9
 
 
-def test_compute_marks_small_sample_as_fallback():
+def test_small_sample_falls_back_to_total():
     recs = compute(_rows())
-    # 업종 B는 3건(<10) → is_fallback True, mean은 '전체' pooled 값으로 대체
-    b_recs = [r for r in recs if r['industry'] == 'B']
-    assert b_recs, "업종 B 레코드가 있어야 함"
-    assert all(r['is_fallback'] for r in b_recs)
-    # '전체' high pool = B(3건 cvr 0.05) + C(2건 cvr 0.20) → (0.15+0.40)/5 = 0.11
-    total_cvr_high = next(r for r in recs if r['industry'] == '전체' and r['metric'] == 'buy_cvr' and r['mix_bucket'] == 'high')
-    assert abs(total_cvr_high['mean'] - 0.11) < 1e-9
-    # B의 high cvr은 대체되어 pool(0.11)과 같아야 하고, B 자기 raw 값(0.05)과 달라야 함 (대체 실제 증명)
-    b_cvr_high = next(r for r in b_recs if r['metric'] == 'buy_cvr' and r['mix_bucket'] == 'high')
-    assert abs(b_cvr_high['mean'] - total_cvr_high['mean']) < 1e-9
-    assert abs(b_cvr_high['mean'] - 0.05) > 1e-6
+    b_cvr = next(r for r in recs if r['industry'] == 'B' and r['metric'] == 'buy_cvr')
+    # B는 3건(<10) → fallback: 값이 전체 pool로 대체(0.05→0.0984...), raw와 달라야 대체 증명
+    assert b_cvr['is_fallback'] is True
+    assert abs(b_cvr['mean'] - TOTAL_CVR) < 1e-9
+    assert abs(b_cvr['mean'] - 0.05) > 1e-6
+    b_attend = next(r for r in recs if r['industry'] == 'B' and r['metric'] == 'attend_rate')
+    assert b_attend['is_fallback'] is True
+    assert abs(b_attend['mean'] - TOTAL_ATTEND) < 1e-9
 
 
-def test_compute_stddev_is_population_like():
-    # 값이 동일하면 stddev 0
+def test_stddev_zero_when_uniform():
     recs = compute(_rows())
     a_attend = next(r for r in recs if r['industry'] == 'A' and r['metric'] == 'attend_rate')
+    a_cvr = next(r for r in recs if r['industry'] == 'A' and r['metric'] == 'buy_cvr')
     assert abs(a_attend['stddev'] - 0.0) < 1e-9
+    assert abs(a_cvr['stddev'] - 0.0) < 1e-9
 
 
 if __name__ == '__main__':

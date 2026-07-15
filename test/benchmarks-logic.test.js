@@ -1,15 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { classifyMixBucket, computeRange, MIX_LOW, MIX_HIGH } = require('../js/benchmarks-logic.js');
-
-test('classifyMixBucket 경계', () => {
-  assert.equal(classifyMixBucket(0.50), 'low');
-  assert.equal(classifyMixBucket(0.8199), 'low');
-  assert.equal(classifyMixBucket(0.82), 'mid');
-  assert.equal(classifyMixBucket(0.91), 'mid');
-  assert.equal(classifyMixBucket(0.9101), 'high');
-  assert.equal(classifyMixBucket(1.0), 'high');
-});
+const { computeRange } = require('../js/benchmarks-logic.js');
 
 test('computeRange 점추정 = totalReg×p', () => {
   const r = computeRange({ totalReg: 160, attendRate: 0.4, ftRate: 0.8, cvr: 0.10, attendSd: 0, cvrSd: 0 });

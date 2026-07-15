@@ -1,16 +1,8 @@
 /* 순수 로직 — 브라우저(window.SimBench)와 Node(module.exports) 양용. DOM/네트워크 의존 없음.
-   구간 경계 0.82/0.91 = 실측 82건 유료비중 p33/p66. fallback sd = 전체 pooled(17.3%p/10.8%p). */
+   fallback sd = 전체 pooled(참석률 17.3%p / 결제CVR 10.8%p). */
 (function (root) {
-  var MIX_LOW = 0.82;
-  var MIX_HIGH = 0.91;
   var FALLBACK_ATTEND_SD = 0.173;
   var FALLBACK_CVR_SD = 0.108;
-
-  function classifyMixBucket(mix) {
-    if (mix < MIX_LOW) return 'low';
-    if (mix <= MIX_HIGH) return 'mid';
-    return 'high';
-  }
 
   // 결제자 = totalReg × p, p = attendRate×ftRate×cvr.
   // 범위 = 이항 표본노이즈 ⊕ 웨비나 간 실측 변동(상대분산 오차전파), 95%(±1.96), 0 clamp.
@@ -38,9 +30,7 @@
   }
 
   var api = {
-    classifyMixBucket: classifyMixBucket,
     computeRange: computeRange,
-    MIX_LOW: MIX_LOW, MIX_HIGH: MIX_HIGH,
     FALLBACK_ATTEND_SD: FALLBACK_ATTEND_SD, FALLBACK_CVR_SD: FALLBACK_CVR_SD
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

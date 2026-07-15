@@ -1,21 +1,14 @@
 """순수 집계 로직 — I/O 없음. 운영 콘솔 webinars row → benchmarks 레코드.
 
-구간 경계(0.82/0.91)는 실측 82건 유료비중 분포의 p33/p66 (임의 라운드 넘버 아님,
-근거: .dev/learnings/2026-07-15-calibration-data-reality-check.md §2.3)."""
+B안(2026-07-15): 결제CVR을 유료비중 구간(tertile)으로 쪼개지 않고 **업종별 단일 값**으로
+집계한다(참석률과 동일 방식). 이유: (업종×3구간) 분할 시 큰 업종조차 칸당 n<10이라 전부
+fallback이 되어 업종 차별화가 사라졌음(v2 체험 F-2). 구간 분할을 폐지해 업종 선택이
+참석률·CVR 양쪽에 실제 반영되게 함. mix_bucket 컬럼은 스키마에 남기되 항상 null.
+"""
 from statistics import pstdev
 
-MIX_LOW = 0.82
-MIX_HIGH = 0.91
 FALLBACK_N = 10
 TOTAL_LABEL = '전체'
-
-
-def mix_bucket(paid_ratio):
-    if paid_ratio < MIX_LOW:
-        return 'low'
-    if paid_ratio <= MIX_HIGH:
-        return 'mid'
-    return 'high'
 
 
 def _attend_rate(row):
@@ -34,14 +27,6 @@ def _buy_cvr(row):
     return None
 
 
-def _paid_ratio(row):
-    reg = row.get('registrants') or 0
-    ad = row.get('ad_registrants')
-    if reg and ad is not None:
-        return ad / reg
-    return None
-
-
 def _agg(values):
     """값 리스트 → (n, mean, stddev). n=0이면 None 반환."""
     if not values:
@@ -54,11 +39,10 @@ def _agg(values):
 
 def compute(rows):
     """rows: [{industry, registrants, ad_registrants, attendees, buyers}, ...]
-    반환: benchmarks 레코드 dict 리스트."""
-    # 1) 업종별·전체 attend_rate 관측치 수집
+    반환: benchmarks 레코드 dict 리스트. attend_rate·buy_cvr 모두 업종별(+전체) 단위,
+    mix_bucket은 항상 None. 표본 n<FALLBACK_N인 업종은 전체 pooled 값으로 대체(is_fallback)."""
     attend_by_ind = {}
-    # 2) 업종별·전체 buy_cvr 관측치 (mix_bucket 단위)
-    cvr_by_ind_bucket = {}
+    cvr_by_ind = {}
 
     def push(d, key, val):
         if val is not None:
@@ -68,50 +52,29 @@ def compute(rows):
         ind = row.get('industry')
         ar = _attend_rate(row)
         cvr = _buy_cvr(row)
-        pr = _paid_ratio(row)
-        bucket = mix_bucket(pr) if pr is not None else None
-
-        # attend_rate: 업종 단위(믹스 무관) + 전체
         push(attend_by_ind, TOTAL_LABEL, ar)
+        push(cvr_by_ind, TOTAL_LABEL, cvr)
         if ind is not None:
             push(attend_by_ind, ind, ar)
-
-        # buy_cvr: (업종, bucket) + (전체, bucket)
-        if bucket is not None:
-            push(cvr_by_ind_bucket, (TOTAL_LABEL, bucket), cvr)
-            if ind is not None:
-                push(cvr_by_ind_bucket, (ind, bucket), cvr)
+            push(cvr_by_ind, ind, cvr)
 
     recs = []
-
-    # 전체 pooled 값 먼저 계산(부족 업종 대체용 참조)
     total_attend = _agg(attend_by_ind.get(TOTAL_LABEL, []))
-    total_cvr = {b: _agg(cvr_by_ind_bucket.get((TOTAL_LABEL, b), [])) for b in ('low', 'mid', 'high')}
+    total_cvr = _agg(cvr_by_ind.get(TOTAL_LABEL, []))
 
-    # attend_rate 레코드
-    for ind, vals in attend_by_ind.items():
-        agg = _agg(vals)
-        if agg is None:
-            continue
-        n, mean, sd = agg
-        fallback = ind != TOTAL_LABEL and n < FALLBACK_N and total_attend is not None
-        if fallback:
-            _, mean, sd = total_attend
-        recs.append({'industry': ind, 'mix_bucket': None, 'metric': 'attend_rate',
-                     'n': n, 'mean': mean, 'stddev': sd, 'is_fallback': fallback})
+    def emit(by_ind, metric, total_ref):
+        for ind, vals in by_ind.items():
+            agg = _agg(vals)
+            if agg is None:
+                continue
+            n, mean, sd = agg
+            fallback = ind != TOTAL_LABEL and n < FALLBACK_N and total_ref is not None
+            if fallback:
+                _, mean, sd = total_ref
+            recs.append({'industry': ind, 'mix_bucket': None, 'metric': metric,
+                         'n': n, 'mean': mean, 'stddev': sd, 'is_fallback': fallback})
 
-    # buy_cvr 레코드 (bucket별)
-    for (ind, bucket), vals in cvr_by_ind_bucket.items():
-        agg = _agg(vals)
-        if agg is None:
-            continue
-        n, mean, sd = agg
-        ref = total_cvr.get(bucket)
-        fallback = ind != TOTAL_LABEL and n < FALLBACK_N and ref is not None
-        if fallback:
-            _, mean, sd = ref
-        recs.append({'industry': ind, 'mix_bucket': bucket, 'metric': 'buy_cvr',
-                     'n': n, 'mean': mean, 'stddev': sd, 'is_fallback': fallback})
-
+    emit(attend_by_ind, 'attend_rate', total_attend)
+    emit(cvr_by_ind, 'buy_cvr', total_cvr)
     # ft_rate: 소스 데이터 없음 → 이번엔 레코드 생성 안 함 (spec §8, 스키마만 예약)
     return recs
