@@ -733,6 +733,10 @@
 
         <div class="card">
           <div class="card-title">💰 매출 예측</div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin:6px 0;cursor:pointer;">
+            <input type="checkbox" id="s-showrange" onchange="showRange=this.checked;calcSim()">
+            <span class="tip" data-tip="표본추출 노이즈 + 웨비나 간 실측 변동을 합산한 95% 범위">범위 보기</span>
+          </label>
           <div id="result-sim"></div>
         </div>
 
@@ -1104,6 +1108,7 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
 
 // ===================== STATE =====================
 let simResult = {};
+let showRange = false;
 let actualResult = {};
 let scenarios = [];
 
@@ -1170,6 +1175,19 @@ function calcSim() {
   simResult = { price, cap, fee, adcost, othercost, cac, landingCvr, organic, attendRate, ftRate, cvr,
     adReg, totalReg, attends, ftAttends, buyers, gmv, revenue, pgFee, feeAmt, netProfit, contribution, expectedSettlement, roas };
 
+  // 범위 계산 (토글 ON일 때만 표시)
+  let rangeBuyers = null, rangeGmv = null;
+  if (showRange) {
+    const rb = SimBench.computeRange({
+      totalReg, attendRate, ftRate, cvr,
+      attendSd: curStddev.attend, cvrSd: curStddev.cvr
+    });
+    // cap 반영: 점추정과 동일 배율로 상·하한도 cap clamp
+    const capClamp = (x) => cap > 0 ? Math.min(x, cap) : x;
+    rangeBuyers = { lo: capClamp(rb.lo), hi: capClamp(rb.hi) };
+    rangeGmv = { lo: capClamp(rb.lo) * price, hi: capClamp(rb.hi) * price };
+  }
+
   // Funnel
   document.getElementById('funnel-sim').innerHTML = funnelHTML([
     { label:'광고신청', n: adReg, rate: null },
@@ -1189,7 +1207,9 @@ function calcSim() {
     <div class="kpi-row">
       <div class="kpi-card kpi-primary">
         <div class="kpi-label"><span class="tip" data-tip="결제자 × 객단가 (VAT 포함)">거래액</span></div>
-        <div><span class="kpi-value">${fmt(gmv)}</span><span class="kpi-unit">만원</span></div>
+        <div><span class="kpi-value">${fmt(gmv)}</span><span class="kpi-unit">만원</span>${
+          rangeGmv ? `<div style="font-size:11px;color:var(--muted,#888);font-weight:400;">95% 범위 ${fmt(rangeGmv.lo)}~${fmt(rangeGmv.hi)}만원</div>` : ''
+        }</div>
       </div>
       <div class="kpi-card ${contribution >= 0 ? 'kpi-green' : 'kpi-red'}">
         <div class="kpi-label"><span class="tip" data-tip="총 수익 × 수수료율 (라이브클래스 몫)">공헌이익 ${profitTag}</span></div>
@@ -1251,7 +1271,9 @@ function calcSim() {
     <div class="metrics-row">
       <div class="metric-item">
         <div class="m-label">결제자</div>
-        <div class="m-value">${fmt(buyers, 1)}<span class="m-unit">명</span></div>
+        <div class="m-value">${fmt(buyers, 1)}<span class="m-unit">명</span>${
+          rangeBuyers ? `<div style="font-size:11px;color:var(--muted,#888);font-weight:400;">95% 범위 ${fmt(rangeBuyers.lo,1)}~${fmt(rangeBuyers.hi,1)}명</div>` : ''
+        }</div>
       </div>
       <div class="metric-item">
         <div class="m-label"><span class="tip" data-tip="매출 ÷ 광고비 × 100 (광고비 대비 매출 효율)">ROAS</span></div>
