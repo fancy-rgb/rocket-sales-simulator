@@ -4,3 +4,4 @@ service-account-simulator.json
 service-account-launch.json
 node_modules/
 package-lock.json
+.env.local
