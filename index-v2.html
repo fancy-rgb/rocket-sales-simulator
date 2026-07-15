@@ -1513,6 +1513,7 @@ async function fetchBenchmarks() {
     .map(b => b.industry))].sort();
   const sel = document.getElementById('s-industry');
   if (sel) {
+    sel.length = 1; // "미선택"(index 0)만 남기고 초기화 — fetchBenchmarks 재호출 시 중복 방지
     for (const ind of inds) {
       const opt = document.createElement('option');
       opt.value = ind; opt.textContent = ind;
