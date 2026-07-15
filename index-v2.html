@@ -654,14 +654,14 @@
           <div class="field">
             <label>총 광고비</label>
             <div class="field-unit">
-              <input type="number" id="s-adcost" value="100" min="0" oninput="calcSim()">
+              <input type="number" id="s-adcost" value="100" min="0" oninput="calcSim();suggestFromBenchmark(false)">
               <span class="unit">만원</span>
             </div>
           </div>
           <div class="field">
             <label><span class="tip" data-tip="메타 광고 캠페인의 '결과당 비용' 수치">CAC (결과당 비용)</span></label>
             <div class="field-unit">
-              <input type="number" id="s-cac" value="5" min="0.1" step="0.1" oninput="calcSim()">
+              <input type="number" id="s-cac" value="5" min="0.1" step="0.1" oninput="calcSim();suggestFromBenchmark(false)">
               <span class="unit">천원</span>
             </div>
           </div>
@@ -675,7 +675,7 @@
           <div class="field">
             <label>오거닉 신청자</label>
             <div class="field-unit">
-              <input type="number" id="s-organic" value="0" min="0" oninput="calcSim()">
+              <input type="number" id="s-organic" value="0" min="0" oninput="calcSim();suggestFromBenchmark(false)">
               <span class="unit">명</span>
             </div>
           </div>
@@ -690,6 +690,13 @@
 
         <div class="card">
           <div class="card-title">📊 전환율</div>
+          <div class="field" style="margin-bottom:10px;">
+            <label><span class="tip" data-tip="선택 시 해당 업종 실측 평균으로 참석률·결제CVR 제안값이 채워집니다. 직접 수정 가능.">업종 (실측 벤치마크)</span></label>
+            <select id="s-industry" onchange="suggestFromBenchmark(true)">
+              <option value="">미선택 (기본값 유지)</option>
+            </select>
+            <div id="s-industry-note" style="font-size:12px;color:var(--muted,#888);margin-top:4px;"></div>
+          </div>
           <div class="grid-2">
             <div class="field">
               <label>참석률</label>
@@ -1015,6 +1022,7 @@
 
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/benchmarks-logic.js"></script>
 
 <script>
 // ===================== SUPABASE =====================
@@ -1469,6 +1477,68 @@ function simActRow(label, sVal, aVal, unit='', higherBetter=true) {
   return `<tr><td>${label}</td><td>${fmt(sv,1)}${unit}</td><td>${fmt(av,1)}${unit}</td><td>${diffStr}</td></tr>`;
 }
 
+// ===================== BENCHMARKS =====================
+let benchmarks = [];
+let curStddev = { attend: SimBench.FALLBACK_ATTEND_SD, cvr: SimBench.FALLBACK_CVR_SD };
+
+async function fetchBenchmarks() {
+  const { data, error } = await supabaseClient.from('benchmarks').select('*');
+  if (error) { console.error('fetchBenchmarks error', error); return; }
+  benchmarks = data || [];
+  // 업종 드롭다운 채우기 (attend_rate 행 기준으로 업종 목록 도출, '전체' 제외)
+  const inds = [...new Set(benchmarks
+    .filter(b => b.metric === 'attend_rate' && b.industry !== '전체')
+    .map(b => b.industry))].sort();
+  const sel = document.getElementById('s-industry');
+  if (sel) {
+    for (const ind of inds) {
+      const opt = document.createElement('option');
+      opt.value = ind; opt.textContent = ind;
+      sel.appendChild(opt);
+    }
+  }
+}
+
+function bmLookup(industry, metric, bucket) {
+  return benchmarks.find(b => b.industry === industry && b.metric === metric &&
+    (bucket === undefined ? b.mix_bucket === null : b.mix_bucket === bucket));
+}
+
+// updateAttend=true: 업종 선택 시 참석률+CVR 둘 다 채움. false: mix 변화 시 CVR만 갱신.
+function suggestFromBenchmark(updateAttend) {
+  const ind = document.getElementById('s-industry')?.value;
+  const note = document.getElementById('s-industry-note');
+  if (!ind) { if (note) note.textContent = ''; return; }  // 미선택 → 기본값 유지
+
+  // 현재 입력으로 유료비중 계산 (calcSim과 동일 정의)
+  const adcost = v('s-adcost'), cac = v('s-cac'), organic = v('s-organic');
+  const adReg = cac > 0 ? (adcost * 10) / cac : 0;
+  const totalReg = adReg + organic;
+  const mix = totalReg > 0 ? adReg / totalReg : 0;
+  const bucket = SimBench.classifyMixBucket(mix);
+
+  const cvrRec = bmLookup(ind, 'buy_cvr', bucket) || bmLookup('전체', 'buy_cvr', bucket);
+  const attRec = bmLookup(ind, 'attend_rate');
+
+  let fallbackHit = false;
+  if (cvrRec) {
+    document.getElementById('s-cvr').value = (cvrRec.mean * 100).toFixed(1);
+    curStddev.cvr = (cvrRec.stddev != null) ? cvrRec.stddev : SimBench.FALLBACK_CVR_SD;
+    fallbackHit = fallbackHit || cvrRec.is_fallback;
+  }
+  if (updateAttend && attRec) {
+    document.getElementById('s-attend').value = (attRec.mean * 100).toFixed(0);
+    curStddev.attend = (attRec.stddev != null) ? attRec.stddev : SimBench.FALLBACK_ATTEND_SD;
+    fallbackHit = fallbackHit || attRec.is_fallback;
+  }
+  if (note) {
+    note.textContent = fallbackHit
+      ? '⚠️ 표본 부족 — 전체 평균 참고값 (유료비중 구간: ' + bucket + ')'
+      : '실측 평균 적용됨 (유료비중 구간: ' + bucket + ')';
+  }
+  calcSim();
+}
+
 // ===================== FIRESTORE LOAD =====================
 async function loadScenariosFromSupabase() {
   document.getElementById('scenario-list').innerHTML =
@@ -1490,6 +1560,7 @@ async function loadScenariosFromSupabase() {
     ...row.params
   }));
   renderScenarios();
+  await fetchBenchmarks();
 }
 
 // ===================== SCENARIOS =====================
