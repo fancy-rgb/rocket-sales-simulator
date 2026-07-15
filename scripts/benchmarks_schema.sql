@@ -24,3 +24,8 @@ create policy "benchmarks_read"
   on public.benchmarks for select
   to public
   using (is_allowed_user() and (not is_blocked()));
+
+-- ⚠️ 필수: RLS 정책과 별개로 테이블 GRANT가 있어야 authenticated(로그인) 역할이 읽는다.
+-- 이게 없으면 로그인해도 42501 permission denied → 클라이언트가 벤치마크를 못 읽음.
+-- (raw SQL로 테이블 생성 시 Supabase가 자동 부여하지 않으므로 명시 필요. scenarios와 동일.)
+grant select on public.benchmarks to authenticated;
