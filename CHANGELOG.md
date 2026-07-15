@@ -1,5 +1,17 @@
 # Changelog
 
+## [v2.0.0] — 2026-05-13
+
+### 인프라
+- **Firebase → Supabase 전환**: 인증(Auth)과 데이터 저장소를 모두 Supabase로 이전
+  - 인증: Firebase Authentication → Supabase Auth (구글 로그인 유지, 허용 도메인 `@liveklass.com`·`@futureschole.com` 동일)
+  - 데이터: Firestore → Supabase Postgres (시나리오·차단 목록·관리자 데이터 이전)
+- 접근 제어·소프트 삭제·관리자 권한 등 기존 동작은 그대로 유지
+
+### 운영
+- 호스팅은 GitHub Pages 유지 (URL 변경 없음: `fancy-rgb.github.io/rocket-sales-simulator`)
+- 차단 목록·관리자 관리 위치가 Firebase 콘솔 → Supabase 대시보드로 변경됨
+
 ## [v1.3.0] — 2026-04-22
 
 ### 인프라
