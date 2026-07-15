@@ -1,0 +1,60 @@
+name: version-sync
+
+# 버전 기록 누락 방지 감시원.
+# index.html / index-v2.html 의 버전(APP_VERSION 상수)과
+# 앱 내 changelog 모달 최상단, 그리고 CHANGELOG.md 최상단이
+# 서로 어긋나면 이 검사가 ❌(빨간불)로 실패한다.
+# (GitHub Pages는 브랜치 직접 배포라 이 검사가 배포를 "차단"하진 않고 "경고"한다.
+#  하드 차단이 필요해지면 Pages를 Actions 배포로 전환한다.)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 버전 3곳 일치 검사
+        run: |
+          set -euo pipefail
+
+          const_of()  { grep -m1 -oE 'const APP_VERSION *= *"[^"]+"' "$1" | sed -E 's/.*"([^"]+)".*/\1/'; }
+          modal_of()  { grep -m1 -oE '<h3>[^ <]+' "$1" | sed 's|<h3>||'; }
+
+          LIVE_CONST=$(const_of index.html)
+          LIVE_MODAL=$(modal_of index.html)
+          CHANGELOG_TOP=$(grep -m1 -oE '^## \[[^]]+\]' CHANGELOG.md | sed -E 's/.*\[([^]]+)\].*/\1/')
+
+          PREVIEW_CONST=$(const_of index-v2.html)
+          PREVIEW_MODAL=$(modal_of index-v2.html)
+
+          echo "── live(index.html) ──"
+          echo "  APP_VERSION 상수 : $LIVE_CONST"
+          echo "  모달 최상단      : $LIVE_MODAL"
+          echo "  CHANGELOG 최상단 : $CHANGELOG_TOP"
+          echo "── preview(index-v2.html) ──"
+          echo "  APP_VERSION 상수 : $PREVIEW_CONST"
+          echo "  모달 최상단      : $PREVIEW_MODAL"
+
+          fail=0
+          if [ "$LIVE_CONST" != "$LIVE_MODAL" ]; then
+            echo "::error::[live] 배지 버전($LIVE_CONST) ≠ 모달 최상단($LIVE_MODAL)"; fail=1
+          fi
+          if [ "$LIVE_CONST" != "$CHANGELOG_TOP" ]; then
+            echo "::error::[live] 배지 버전($LIVE_CONST) ≠ CHANGELOG.md 최상단($CHANGELOG_TOP)"; fail=1
+          fi
+          if [ "$PREVIEW_CONST" != "$PREVIEW_MODAL" ]; then
+            echo "::error::[preview] 배지 버전($PREVIEW_CONST) ≠ 모달 최상단($PREVIEW_MODAL)"; fail=1
+          fi
+
+          if [ "$fail" -ne 0 ]; then
+            echo ""
+            echo "버전 기록이 어긋났습니다. 릴리즈 시 아래를 같은 버전으로 함께 올려야 합니다."
+            echo "  live    : index.html 의 APP_VERSION 상수 · 모달 최상단 <h3> · CHANGELOG.md 최상단"
+            echo "  preview : index-v2.html 의 APP_VERSION 상수 · 모달 최상단 <h3>"
+            exit 1
+          fi
+          echo "✅ 버전 기록 일치."

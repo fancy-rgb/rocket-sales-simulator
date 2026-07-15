@@ -151,14 +151,34 @@
 [ ] 보안 변경 포함 시 → 코드 의존성 먼저 수정 계획 수립
 ```
 
-### 완료 전 체크리스트 (배포 전 반드시 확인)
+### 버전 기록 절차 (배포 전 반드시 확인) — 단일 소스 + CI 감시
 
-버전 업데이트 시 아래 3곳을 반드시 함께 수정한다. 하나라도 빠지면 릴리즈 미완료다.
+> 배경: 과거 이 체크리스트는 "3곳을 손으로 함께 수정"이었으나, Firebase→Supabase 전환(v2.0.0)에서 3곳 모두 누락됐다(체크리스트는 있었으나 트리거되지 않아 조용히 건너뜀). 그래서 ①헤더 배지는 손으로 고칠 곳 자체를 없애고(단일 상수) ②나머지 일치는 CI가 감시하도록 구조화했다.
+
+**헤더 배지는 더 이상 손으로 고치지 않는다.** `index.html`/`index-v2.html` 최상단 스크립트의 `const APP_VERSION` 값만 바꾸면 배지가 자동으로 그 값을 표시한다.
+
+**릴리즈(기능 배포) 시 함께 올려야 하는 곳:**
 
 ```
-[ ] CHANGELOG.md — 버전별 변경 내역 기록
-[ ] index.html changelog 모달 — 앱 내 업데이트 내역 화면 (버전 배지 클릭 시 표시)
-[ ] 헤더 버전 배지 — v1.x.x 숫자 업데이트
+live 버전(index.html):
+[ ] const APP_VERSION 값
+[ ] 앱 내 changelog 모달 최상단 <h3>vX.Y.Z — 날짜</h3> 항목 추가
+[ ] CHANGELOG.md 최상단 ## [vX.Y.Z] — 날짜 항목 추가
+    → 이 3개의 버전 문자열이 서로 같아야 한다.
+
+preview 버전(index-v2.html, 승격 전까지):
+[ ] const APP_VERSION 값 (예: v2.1.0-preview)
+[ ] 앱 내 모달 최상단 <h3> 항목
+    → 이 2개가 서로 같아야 한다. (CHANGELOG.md는 live 정본이므로 preview와 별개)
+```
+
+**CI 감시** — `.github/workflows/version-sync.yml`이 push마다 위 일치를 검사한다. 어긋나면 커밋에 ❌(빨간불)가 뜬다. (GitHub Pages가 브랜치 직접 배포라 배포를 "차단"하진 않고 "경고"한다. 하드 차단이 필요하면 Pages를 Actions 배포로 전환.)
+
+**로컬 사전 확인**(선택):
+```bash
+grep -m1 -oE 'const APP_VERSION *= *"[^"]+"' index.html   # 배지 버전
+grep -m1 '<h3>v' index.html                                # 모달 최상단
+grep -m1 '^## \[v' CHANGELOG.md                            # CHANGELOG 최상단
 ```
 
 ---

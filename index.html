@@ -607,7 +607,7 @@
       <button class="tab" onclick="showTab('scenarios')">시나리오 비교</button>
     </nav>
     <div class="header-right">
-      <button class="version-badge" onclick="openChangelog()">v2.0.0</button>
+      <button class="version-badge" id="version-badge" onclick="openChangelog()"></button>
       <div id="header-user" style="display:none; align-items:center; gap:8px;">
         <span class="header-user-name" id="header-user-name"></span>
         <button class="btn-signout" onclick="signOut()">로그아웃</button>
@@ -1029,6 +1029,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <script>
+// ===================== VERSION (단일 소스) =====================
+// 버전 숫자는 여기 한 곳에서만 관리한다. 헤더 배지가 이 값을 자동 표시.
+// 릴리즈 시: ①이 상수 ②아래 changelog 모달 최상단 <h3> ③CHANGELOG.md 최상단
+// 세 곳을 같은 버전으로 함께 올린다. (.github/workflows/version-sync.yml 이 일치 검사)
+const APP_VERSION = "v2.0.0";
+document.getElementById("version-badge").textContent = APP_VERSION;
+
 // ===================== SUPABASE =====================
 const SUPABASE_URL = 'https://mlykalmpqalxhwrfoaow.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_Hk-x0XMM0nDcXKkp5sEdPA_hy3DTs0n'
