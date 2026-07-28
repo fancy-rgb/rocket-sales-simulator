@@ -5,3 +5,4 @@ service-account-launch.json
 node_modules/
 package-lock.json
 .env.local
+supabase/.temp/
