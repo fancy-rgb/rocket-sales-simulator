@@ -1043,6 +1043,40 @@
   </div>
 </div>
 
+<!-- 피드백 플로팅 버튼 + 모달 (Slack #ai-theo-noti 로 중계) -->
+<button type="button" id="feedback-fab" onclick="openFeedbackModal()" aria-label="피드백 남기기"
+  style="display:none; position:fixed; bottom:24px; right:24px; z-index:998; align-items:center; gap:6px;
+         background:var(--primary); color:#fff; border:none; border-radius:99px; padding:11px 18px;
+         font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,.18);">
+  💬 피드백
+</button>
+
+<div id="feedback-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:999; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:24px; width:400px; box-shadow:0 20px 40px rgba(0,0,0,.15);">
+    <div style="font-size:16px; font-weight:700; margin-bottom:4px;">💬 피드백 남기기</div>
+    <div style="font-size:12px; color:var(--gray-500); margin-bottom:16px;">불편한 점이나 개선 아이디어를 알려주세요. Slack으로 바로 전달됩니다.</div>
+    <div class="field">
+      <label>카테고리</label>
+      <select id="feedback-category" class="modal-select">
+        <option>버그/오류</option>
+        <option>불편사항</option>
+        <option selected>개선 제안</option>
+        <option>기타</option>
+      </select>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>내용</label>
+      <textarea id="feedback-content" rows="4" placeholder="자유롭게 적어주세요."
+        style="width:100%; resize:vertical; font-family:inherit; font-size:13px; line-height:1.6;
+               padding:8px 10px; border:1px solid var(--gray-300); border-radius:8px;"></textarea>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
+      <button class="btn btn-secondary" id="feedback-cancel" onclick="closeFeedbackModal()">취소</button>
+      <button class="btn btn-primary" id="feedback-submit" onclick="submitFeedback()">보내기</button>
+    </div>
+  </div>
+</div>
+
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/benchmarks-logic.js"></script>
@@ -1093,6 +1127,7 @@ async function handleUser(user) {
     isAdmin = false;
     document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('header-user').style.display = 'none';
+    document.getElementById('feedback-fab').style.display = 'none';
     return;
   }
 
@@ -1118,7 +1153,50 @@ async function handleUser(user) {
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('header-user').style.display = 'flex';
   document.getElementById('header-user-name').textContent = user.user_metadata?.full_name || email;
+  document.getElementById('feedback-fab').style.display = 'inline-flex';
   loadScenariosFromSupabase();
+}
+
+// ===================== FEEDBACK =====================
+// webhook은 Edge Function(feedback) 시크릿에 있다 — 이 레포는 PUBLIC이라 클라이언트에 두지 않는다.
+function openFeedbackModal() {
+  document.getElementById('feedback-content').value = '';
+  document.getElementById('feedback-category').value = '개선 제안';
+  document.getElementById('feedback-modal').style.display = 'flex';
+  document.getElementById('feedback-content').focus();
+}
+
+function closeFeedbackModal() {
+  document.getElementById('feedback-modal').style.display = 'none';
+}
+
+async function submitFeedback() {
+  const content = document.getElementById('feedback-content').value.trim();
+  if (!content) { alert('내용을 입력해주세요.'); return; }
+
+  const btn = document.getElementById('feedback-submit');
+  btn.disabled = true;
+  btn.textContent = '전송 중…';
+
+  const { error } = await supabaseClient.functions.invoke('feedback', {
+    body: {
+      category: document.getElementById('feedback-category').value,
+      content,
+      version: APP_VERSION,
+    },
+  });
+
+  btn.disabled = false;
+  btn.textContent = '보내기';
+
+  if (error) {
+    console.error('[feedback] 전송 실패:', error);
+    alert('전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    return;
+  }
+
+  closeFeedbackModal();
+  showToast('🎉 피드백 감사합니다! Slack으로 전달됐습니다.');
 }
 
 // 페이지 로드 시 기존 세션 확인
