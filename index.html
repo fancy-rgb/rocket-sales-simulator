@@ -686,9 +686,16 @@
             </div>
           </div>
           <div class="field">
-            <label><span class="tip" data-tip="광고 클릭 → 웨비나 신청 전환율 (실적 비교용, 매출 계산에 영향 없음)">상페 CVR</span></label>
+            <label><span class="tip" data-tip="광고 클릭 → 웨비나 신청 전환율. 그 자체로는 매출 계산에 안 쓰이지만(CAC에 이미 반영됨), 아래 개선 목표를 넣으면 CAC가 자동 조정됩니다">상페 CVR (현재)</span></label>
             <div class="field-unit">
               <input type="number" id="s-landingcvr" value="" placeholder="입력 선택" min="0" max="100" step="0.1" oninput="calcSim()">
+              <span class="unit">%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label><span class="tip" data-tip="상세페이지를 개선했을 때 목표 전환율. 입력하면 CAC = 클릭당비용 ÷ 상페CVR 관계로 CAC가 자동 조정됩니다 (클릭당비용은 지금과 같다고 가정)">상페 CVR 개선 목표</span></label>
+            <div class="field-unit">
+              <input type="number" id="s-cvrtarget" value="" placeholder="입력 선택" min="0" max="100" step="0.1" oninput="calcSim()">
               <span class="unit">%</span>
             </div>
           </div>
@@ -947,6 +954,18 @@
       <button class="btn btn-secondary btn-sm" onclick="closeChangelog()">닫기</button>
     </div>
     <div class="changelog-modal-body">
+      <h3>v2.3.0 — 2026-08-25</h3>
+      <h4>상페 CVR 개선 목표</h4>
+      <ul>
+        <li>매니저가 익숙한 <b>CAC 입력은 그대로 유지</b>. 여기에 "상페 CVR 개선 목표" 칸 1개만 추가</li>
+        <li>목표를 입력하면 <code>CAC = CAC_기준 × (현재CVR ÷ 목표CVR)</code>로 자동 조정 —
+          클릭당 비용을 물어보지 않고도(매니저가 익숙하지 않은 값) 상페 개선이 매출에 반영됨</li>
+        <li>⚠️ 전제: 클릭당 비용은 상페를 개선해도 그대로라고 가정합니다. 이 가정이 맞을지는
+          검증하지 않았으며, 화면에 그대로 안내합니다</li>
+        <li>비현실적으로 낙관적인 목표(현재의 3배 초과) 경고, 목표 CAC가 실측 관측 범위를
+          벗어나면 별도 경고, 정원 병목·손익분기도 목표 시나리오 기준으로 자동 재계산</li>
+        <li>목표 미입력 시 기존 계산과 완전히 동일 (하위호환)</li>
+      </ul>
       <h3>v2.2.0 — 2026-08-25</h3>
       <h4>입력 추적성</h4>
       <ul>
@@ -1062,7 +1081,7 @@
 // 버전 숫자는 여기 한 곳에서만 관리한다. 헤더 배지가 이 값을 자동 표시.
 // 릴리즈 시: ①이 상수 ②아래 changelog 모달 최상단 <h3> ③CHANGELOG.md 최상단
 // 세 곳을 같은 버전으로 함께 올린다. (.github/workflows/version-sync.yml 이 일치 검사)
-const APP_VERSION = "v2.2.0";
+const APP_VERSION = "v2.3.0";
 document.getElementById("version-badge").textContent = APP_VERSION;
 
 // ===================== SUPABASE =====================
@@ -1193,12 +1212,12 @@ function simWarningsHTML(M) {
     </div></div>`);
   }
 
-  // ② CPC 교차검증
+  // ② CPC 교차검증 — 🔴 항상 "지금 매니저가 타이핑한" cacBase·현재CVR 기준(목표와 무관·안 흔들림)
   const c = M.cpcCheck;
   if (c.status === 'too_low' || c.status === 'too_high') {
     out.push(`<div class="sim-warn">🔎<div>
       <b>CAC 입력값이 현실적인지 확인해 주세요.</b>
-      CAC ${fmt(M.cac,1)}천원 × 상페 CVR ${fmtPct(M.landingCvr*100)} =
+      CAC ${fmt(M.cacBase,1)}천원 × 상페 CVR ${fmtPct(M.landingCvr*100)} =
       클릭당 비용 <b>${fmt(c.impliedCpcKrw,0)}원</b>인데,
       실측 관측 범위는 ${fmt(B.cpcMinKrw,0)}~${fmt(B.cpcMaxKrw,0)}원(중앙값 ${fmt(B.cpcMedianKrw,0)}원, n=${B.n})입니다.
       ${c.status === 'too_low' ? '이보다 싼 클릭은 관측된 적이 없습니다 — CAC가 너무 낮게 잡혔을 수 있습니다.'
@@ -1206,15 +1225,38 @@ function simWarningsHTML(M) {
     </div></div>`);
   } else if (c.status === 'none') {
     out.push(`<div class="sim-warn sim-warn-info">💡<div>
-      <b>상페 CVR은 매출 계산에 쓰이지 않습니다</b> — CAC(신청 1건당 비용)에 이미 반영돼 있기 때문입니다.
-      대신 입력하면 <b>CAC × 상페CVR = 클릭당 비용</b>으로 CAC 입력값이 현실적인지 검산해 드립니다.
+      <b>상페 CVR은 그 자체로는 매출 계산에 쓰이지 않습니다</b> — CAC(신청 1건당 비용)에 이미 반영돼 있기 때문입니다.
+      대신 입력하면 <b>CAC × 상페CVR = 클릭당 비용</b>으로 CAC 입력값이 현실적인지 검산합니다.
+      아래 <b>"상페 CVR 개선 목표"</b>를 함께 입력하면 그 개선이 매출에 반영되도록 CAC를 자동 조정합니다.
     </div></div>`);
   }
 
-  // CAC 자체가 관측 범위 밖인가
+  // 상페 CVR 목표 시나리오 — 🔴 새 입력을 요구하지 않고(CPC는 여전히 안 물음),
+  //    CAC 입력 습관을 유지한 채 CVR을 레버로 만든다 (2026-08-25, 매니저 CAC 습관 보존 요구사항)
+  const t = M.cvrTarget;
+  if (t.active) {
+    const dirLabel = t.direction === 'improve' ? '개선' : t.direction === 'worsen' ? '악화' : '동일';
+    out.push(`<div class="sim-warn sim-warn-info">🎯<div>
+      <b>상페 CVR ${dirLabel} 시나리오</b> — 현재 ${fmtPct(t.currentLandingCvr*100)} → 목표 ${fmtPct(t.targetLandingCvr*100)}.
+      CAC ${fmt(t.cacBase,1)}천원 → <b>${fmt(t.cacTarget,1)}천원</b>으로 조정해 계산합니다
+      (클릭당 비용은 지금과 같다고 가정합니다).
+      ⚠️ <b>이 가정이 맞을지는 알 수 없습니다</b> — 상페를 개선해도 클릭당 비용이 오히려
+      오르거나 내릴 수 있습니다. 합의 시 안전마진을 두고 참고해 주세요.
+      ${t.tooOptimistic ? `<br>📈 목표가 현재의 ${SimModel.CVR_TARGET_MAX_RATIO}배를 넘습니다 — 비현실적으로 낙관적일 수 있습니다.` : ''}
+    </div></div>`);
+    if (M.cacTargetStatus === 'too_low' || M.cacTargetStatus === 'too_high') {
+      out.push(`<div class="sim-warn">📏<div>
+        이 목표가 만드는 CAC <b>${fmt(t.cacTarget,1)}천원(= ${fmt(t.cacTarget*1000,0)}원)</b>은
+        실측 관측 범위 ${fmt(B.cacMinKrw,0)}~${fmt(B.cacMaxKrw,0)}원(중앙값 ${fmt(B.cacMedianKrw,0)}원, n=${B.n})
+        ${M.cacTargetStatus === 'too_low' ? '아래' : '위'}입니다 — 목표가 지나치게 ${M.cacTargetStatus === 'too_low' ? '낙관적' : '비관적'}일 수 있습니다.
+      </div></div>`);
+    }
+  }
+
+  // 입력한 CAC 자체가 관측 범위 밖인가 — 🔴 base 고정(목표와 무관)
   if (M.cacStatus === 'too_low' || M.cacStatus === 'too_high') {
     out.push(`<div class="sim-warn">📏<div>
-      CAC ${fmt(M.cac,1)}천원(= ${fmt(M.cac*1000,0)}원)은 실측 관측 범위
+      CAC ${fmt(M.cacBase,1)}천원(= ${fmt(M.cacBase*1000,0)}원)은 실측 관측 범위
       ${fmt(B.cacMinKrw,0)}~${fmt(B.cacMaxKrw,0)}원(중앙값 <b>${fmt(B.cacMedianKrw,0)}원</b>, n=${B.n})
       ${M.cacStatus === 'too_low' ? '아래' : '위'}입니다.
     </div></div>`);
@@ -1236,13 +1278,15 @@ function calcSim() {
   const cvr   = v('s-cvr') / 100;
 
   const othercost = v('s-othercost');
-  const landingCvr = v('s-landingcvr'); // 비교용 참고값, 계산에 영향 없음
+  const landingCvr = v('s-landingcvr'); // 현재 상페 CVR — 그 자체로는 계산 미반영(CAC에 이미 흡수)
+  const cvrTargetInput = v('s-cvrtarget'); // 상페 CVR 개선 목표 — 입력하면 CAC 자동 조정
 
   // 🔴 계산식의 단일 원본은 js/sim-model.js 다. 여기서 식을 복제하지 않는다.
   //    (2026-08-25 이전에는 이 블록이 index.html·index-v2.html 두 곳에 손으로 복제돼 있었다)
   const M = SimModel.computeSim({
     price, cap, fee, adcost, cac, organic, othercost, attendRate, ftRate, cvr,
-    landingCvr: landingCvr / 100          // 화면은 %, 모델은 분수
+    landingCvr: landingCvr / 100,          // 화면은 %, 모델은 분수
+    targetLandingCvr: cvrTargetInput / 100
   });
   const { adReg, totalReg, attends, ftAttends, rawBuyers, buyers,
           gmv, revenue, pgFee, feeAmt, netProfit, contribution,
@@ -1255,7 +1299,7 @@ function calcSim() {
   // ① 각 단계에 "이 숫자가 어디서 나왔는지" 수식을 그대로 노출한다.
   document.getElementById('funnel-sim').innerHTML = funnelHTML([
     { label:'광고신청', n: adReg, rate: null,
-      formula: `광고비 ${fmt(adcost,0)}만원 ÷ CAC ${fmt(cac,1)}천원` },
+      formula: `광고비 ${fmt(adcost,0)}만원 ÷ CAC ${fmt(M.cac,1)}천원${M.cvrTarget.active ? ' (상페CVR 목표 반영)' : ''}` },
     { label:'총신청', n: totalReg, rate: null,
       formula: `광고 ${fmt(adReg,0)} + 오거닉 ${fmt(organic,0)}` },
     { label:'참석', n: attends, rate: attendRate,

@@ -167,3 +167,96 @@ test('전환율 0이면 정원 경계가 정의되지 않는다', () => {
   assert.strictEqual(r.regAtCap, null);
   assert.strictEqual(r.cacAtCap, null);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// [4] 상페 CVR 개선 목표 — CAC 자동 조정 (2026-08-25 챌린저 검토 반영)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test('CVR 목표 — 미입력이면 완전히 비활성, 기존과 동일한 결과', () => {
+  const withTarget = M.computeSim(IN({ landingCvr: 0.176 }));       // 목표 없이 현재값만 입력
+  const without = M.computeSim(IN({}));
+  assert.strictEqual(withTarget.cvrTarget.active, false);
+  assert.strictEqual(withTarget.cac, without.cac);
+  assert.strictEqual(withTarget.gmv, without.gmv);
+});
+
+test('CVR 목표 — 목표를 현재값과 같게 넣으면 결과가 변하지 않는다', () => {
+  const base = M.computeSim(IN({}));
+  const same = M.computeSim(IN({ landingCvr: 0.176, targetLandingCvr: 0.176 }));
+  assert.strictEqual(same.cvrTarget.direction, 'same');
+  near(same.cac, base.cac, 'cac');
+  near(same.gmv, base.gmv, 'gmv');
+});
+
+test('CVR 목표 — 개선하면 CAC가 낮아지고 매출이 늘어난다', () => {
+  const r = M.computeSim(IN({ cac: 6.875, landingCvr: 0.176, targetLandingCvr: 0.25 }));
+  assert.strictEqual(r.cvrTarget.active, true);
+  assert.strictEqual(r.cvrTarget.direction, 'improve');
+  assert.ok(r.cac < 6.875, `목표 CAC ${r.cac}가 기준 6.875보다 낮아야 함`);
+  near(r.cac, 6.875 * (0.176 / 0.25), 'cacTarget');
+  const base = M.computeSim(IN({ cac: 6.875, landingCvr: 0.176 }));
+  assert.ok(r.gmv > base.gmv, `목표 매출 ${r.gmv}이 기준 ${base.gmv}보다 커야 함`);
+});
+
+test('CVR 목표 — 악화 방향도 계산되고 매출이 줄어든다 (에러 아님)', () => {
+  const r = M.computeSim(IN({ cac: 6.875, landingCvr: 0.176, targetLandingCvr: 0.10 }));
+  assert.strictEqual(r.cvrTarget.direction, 'worsen');
+  assert.ok(r.cac > 6.875);
+  const base = M.computeSim(IN({ cac: 6.875, landingCvr: 0.176 }));
+  assert.ok(r.gmv < base.gmv);
+});
+
+test('CVR 목표 — 항등식 정합: 함의 CPC가 목표와 무관하게 동일하다', () => {
+  const cpcs = [0.10, 0.176, 0.25, 0.276].map(t => {
+    const r = M.computeSim(IN({ cac: 6.875, landingCvr: 0.176, targetLandingCvr: t }));
+    return r.cac * 1000 * t;               // CAC_목표 × 목표CVR = CPC (불변이어야 함)
+  });
+  cpcs.forEach(c => near(c, cpcs[0], 'impliedCpc', 1e-6));
+});
+
+test('입력 방어 — 목표 0·음수는 비활성으로 처리된다 (나눗셈 폭주 없음)', () => {
+  for (const bad of [0, -0.1, -1]) {
+    const r = M.computeSim(IN({ landingCvr: 0.176, targetLandingCvr: bad }));
+    assert.strictEqual(r.cvrTarget.active, false);
+    assert.ok(isFinite(r.gmv) && !isNaN(r.gmv));
+  }
+});
+
+test('입력 방어 — 현재 CVR을 안 넣으면 목표만으론 활성화되지 않는다', () => {
+  const r = M.computeSim(IN({ landingCvr: 0, targetLandingCvr: 0.25 }));
+  assert.strictEqual(r.cvrTarget.active, false);
+  assert.strictEqual(r.cvrTarget.reason, 'no_current_cvr');
+});
+
+test('비현실적 목표 — 현재의 3배 넘으면 tooOptimistic 플래그', () => {
+  const ok = M.computeSim(IN({ landingCvr: 0.10, targetLandingCvr: 0.29 }));   // 2.9배
+  const over = M.computeSim(IN({ landingCvr: 0.10, targetLandingCvr: 0.31 })); // 3.1배
+  assert.strictEqual(ok.cvrTarget.tooOptimistic, false);
+  assert.strictEqual(over.cvrTarget.tooOptimistic, true);
+});
+
+test('목표 시나리오 병목 — 목표 CAC 기준으로 정원 병목이 재계산된다', () => {
+  // 기준 CAC 6.875천원(정원 여유, 경계 1.6천원) → 목표 80%까지 올리면 cacTarget 1.512천원으로
+  // 경계 아래로 떨어져 정원에 걸려야 한다 (6.875 × 0.176/0.8 = 1.512)
+  const r = M.computeSim(IN({ cac: 6.875, landingCvr: 0.176, targetLandingCvr: 0.8 }));
+  assert.ok(r.cac < 1.6, `목표 CAC ${r.cac}가 정원 경계 1.6보다 낮아야 하는 케이스 설계`);
+  assert.strictEqual(r.capBound, true);
+  assert.strictEqual(r.bottleneck, 'cap');
+});
+
+test('목표 시나리오 진단 — cacTargetStatus가 목표 CAC를 실측 범위로 검산한다', () => {
+  // 목표 85% → cacTarget 1.4235천원(=1,423.5원) < 실측 관측 최소 여유선(1,500원) → too_low
+  const r = M.computeSim(IN({ cac: 6.875, landingCvr: 0.176, targetLandingCvr: 0.85 }));
+  assert.strictEqual(r.cacTargetStatus, 'too_low');
+  // base cacStatus는 그대로 base(6.875천원=ok)를 봐야 한다 — 목표에 안 흔들림
+  assert.strictEqual(r.cacStatus, 'ok');
+});
+
+test('base 진단은 목표 시나리오와 독립 — cpcCheck·cacStatus가 base 값 기준으로 고정된다', () => {
+  const withTarget = M.computeSim(IN({ cac: 1, landingCvr: 0.176, targetLandingCvr: 0.25 }));
+  const withoutTarget = M.computeSim(IN({ cac: 1, landingCvr: 0.176 }));
+  // base cac(1천원)가 그대로 비현실적이므로 cpcCheck·cacStatus는 목표 유무와 무관하게 동일해야 한다
+  assert.strictEqual(withTarget.cpcCheck.status, withoutTarget.cpcCheck.status);
+  assert.strictEqual(withTarget.cacStatus, withoutTarget.cacStatus);
+  near(withTarget.cpcCheck.impliedCpcKrw, withoutTarget.cpcCheck.impliedCpcKrw, 'impliedCpc');
+});

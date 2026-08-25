@@ -38,6 +38,7 @@
 
   var VAT_RATE = 0.1;
   var PG_FEE_RATE = 0.035;
+  var CVR_TARGET_MAX_RATIO = 3; // 목표가 현재의 3배를 넘으면 '비현실적으로 낙관적' 플래그
 
   /* 신청자 1명이 만드는 결제자 수 = 참석률 × FT참석률 × 결제CVR */
   function buyersPerReg(i) {
@@ -92,11 +93,49 @@
     return 'funnel';
   }
 
+  /* 상페 CVR '개선 목표' → CAC 자동 조정.
+     CAC = 클릭당비용(CPC) ÷ 상페CVR 이므로, CPC가 그대로라고 가정하면
+     CAC_목표 = CAC_기준 × (현재CVR ÷ 목표CVR).
+     🔴 이 가정("상페를 고쳐도 클릭당 비용은 안 변한다")이 이 기능 전체의 전제다.
+        방향(오를지 내릴지)은 검증하지 않았다 — 화면에 방향 불확실성을 그대로 노출한다
+        (2026-08-25 챌린저 검토: "대체로 오른다"는 주장은 실측 근거 없어 반영하지 않음).
+     입력 방어: target<=0 이거나 현재CVR·CAC 중 하나라도 없으면 비활성(원본 그대로 사용) —
+     나눗셈 폭주·NaN이 나올 수 없다. */
+  function resolveCvrTarget(cacBase, landingCvr, targetLandingCvr) {
+    if (!cacBase || cacBase <= 0 || !landingCvr || landingCvr <= 0 ||
+        !targetLandingCvr || targetLandingCvr <= 0) {
+      var reason = (!targetLandingCvr || targetLandingCvr <= 0) ? 'no_target'
+                 : (!landingCvr || landingCvr <= 0) ? 'no_current_cvr'
+                 : 'no_base_cac';
+      return { active: false, reason: reason, direction: 'none', ratio: 1,
+        cacBase: cacBase || 0, cacTarget: null, tooOptimistic: false,
+        currentLandingCvr: landingCvr || 0, targetLandingCvr: targetLandingCvr || 0 };
+    }
+    var ratio = landingCvr / targetLandingCvr;      // CAC_목표 = CAC_기준 × ratio
+    var cacTarget = cacBase * ratio;
+    var direction = targetLandingCvr > landingCvr ? 'improve'
+                  : targetLandingCvr < landingCvr ? 'worsen' : 'same';
+    var tooOptimistic = (targetLandingCvr / landingCvr) > CVR_TARGET_MAX_RATIO;
+    return { active: true, reason: 'ok', direction: direction, ratio: ratio,
+      cacBase: cacBase, cacTarget: cacTarget, tooOptimistic: tooOptimistic,
+      currentLandingCvr: landingCvr, targetLandingCvr: targetLandingCvr };
+  }
+
   function computeSim(i) {
     var price = i.price || 0, cap = i.cap || 0, fee = i.fee || 0;
-    var adcost = i.adcost || 0, othercost = i.othercost || 0, cac = i.cac || 0;
+    var adcost = i.adcost || 0, othercost = i.othercost || 0;
+    var cacBase = i.cac || 0;
     var organic = i.organic || 0;
     var attendRate = i.attendRate || 0, ftRate = i.ftRate || 0, cvr = i.cvr || 0;
+    var landingCvr = i.landingCvr || 0;
+    var targetLandingCvr = i.targetLandingCvr || 0;
+
+    // 🔴 상페 CVR 목표가 유효하면 이하 전체 계산(퍼널·정원 병목·손익분기)이 CAC_목표로 흘러간다.
+    //    (2026-08-25 챌린저 지적: 목표 시나리오의 병목 판단이 base CAC 기준으로 남으면
+    //     목표 시나리오에서 경고가 무력화된다 — 그래서 "일부 필드만 목표로 교체"가 아니라
+    //     cac 변수 자체를 유효값으로 바꿔 그 아래 계산이 자동으로 따라오게 한다)
+    var cvrTarget = resolveCvrTarget(cacBase, landingCvr, targetLandingCvr);
+    var cac = cvrTarget.active ? cvrTarget.cacTarget : cacBase;
 
     // ── 퍼널 (기존 index.html:1165~1170과 동일) ──
     var adReg = cac > 0 ? (adcost * 10) / cac : 0;
@@ -125,13 +164,22 @@
     //    (기존 코드는 cap을 무시해 "정원 20명인데 손익분기 25명"을 태연히 표시했다)
     var beReachable = !(cap > 0 && beBuyers > cap);
 
+    // capThreshold는 cac와 무관(정원을 채우는 CAC 경계 자체를 구하는 계산)이라 그대로 둔다.
     var thr = capThreshold(i);
-    var cross = crossCheckCpc(i);
+
+    // 🔴 base 진단(cpcCheck·cacStatus)은 항상 매니저가 "지금 실제로 타이핑한" cacBase·현재CVR
+    //    기준으로 고정한다 — 목표 시나리오를 켜도 안 흔들린다. 두 질문이 다르기 때문이다.
+    //    ("당신이 입력한 CAC가 그럴듯한가" vs "그 목표를 달성하려면 필요한 CAC가 그럴듯한가")
+    var cross = crossCheckCpc({ cac: cacBase, landingCvr: landingCvr });
+    var cacStatus = checkCac({ cac: cacBase });
+    // 목표 시나리오 전용 진단 — defect #2: 목표가 만드는 CAC도 실측 범위로 검산한다.
+    var cacTargetStatus = cvrTarget.active ? checkCac({ cac: cvrTarget.cacTarget }) : 'none';
 
     return {
       // 기존 필드 (하위호환 — HTML이 그대로 구조분해한다)
+      // 🔴 cac는 '유효 CAC' — 목표가 활성화되면 cacTarget, 아니면 cacBase와 같다.
       price: price, cap: cap, fee: fee, adcost: adcost, othercost: othercost, cac: cac,
-      landingCvr: i.landingCvr || 0, organic: organic,
+      landingCvr: landingCvr, organic: organic,
       attendRate: attendRate, ftRate: ftRate, cvr: cvr,
       adReg: adReg, totalReg: totalReg, attends: attends, ftAttends: ftAttends,
       buyers: buyers, gmv: gmv, revenue: revenue, pgFee: pgFee, feeAmt: feeAmt,
@@ -147,9 +195,14 @@
       regAtCap: thr.regAtCap,
       cacAtCap: thr.cacAtCap,
       beReachable: beReachable,
-      cacStatus: checkCac(i),
+      cacStatus: cacStatus,
       cpcCheck: cross,
-      bench: BENCH
+      bench: BENCH,
+
+      // 상페 CVR 목표 시나리오
+      cacBase: cacBase,
+      cvrTarget: cvrTarget,
+      cacTargetStatus: cacTargetStatus
     };
   }
 
@@ -160,9 +213,11 @@
     crossCheckCpc: crossCheckCpc,
     checkCac: checkCac,
     bottleneck: bottleneck,
+    resolveCvrTarget: resolveCvrTarget,
     BENCH: BENCH,
     VAT_RATE: VAT_RATE,
-    PG_FEE_RATE: PG_FEE_RATE
+    PG_FEE_RATE: PG_FEE_RATE,
+    CVR_TARGET_MAX_RATIO: CVR_TARGET_MAX_RATIO
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
