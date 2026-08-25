@@ -233,6 +233,20 @@
       white-space: nowrap;
     }
     .hint { font-size: 11px; color: var(--gray-500); margin-top: 3px; }
+    /* ① 퍼널 단계별 수식 노출 — "입력이 어디에 반영됐는지" 추적용 */
+    .funnel-formula {
+      display: block; margin-top: 4px; font-size: 9px; line-height: 1.35;
+      color: var(--gray-500); word-break: keep-all;
+    }
+    /* ②③ 입력 검산·병목 알림 */
+    .sim-warn {
+      display: flex; gap: 8px; align-items: flex-start;
+      padding: 10px 12px; margin-bottom: 10px; border-radius: 8px;
+      font-size: 12px; line-height: 1.5;
+      background: #FFF7ED; border: 1px solid #FDBA74; color: #9A3412;
+    }
+    .sim-warn.sim-warn-info { background: #EFF6FF; border-color: #93C5FD; color: #1E40AF; }
+    .sim-warn b { font-weight: 700; }
 
     /* Results */
     .result-grid {
@@ -933,6 +947,20 @@
       <button class="btn btn-secondary btn-sm" onclick="closeChangelog()">닫기</button>
     </div>
     <div class="changelog-modal-body">
+      <h3>v2.2.0 — 2026-08-25</h3>
+      <h4>입력 추적성</h4>
+      <ul>
+        <li>퍼널 각 단계에 <b>계산 수식을 그대로 표시</b> — 입력한 숫자가 어디에 반영됐는지 화면에서 바로 확인</li>
+        <li><b>상페 CVR 검산 기능</b>: CAC × 상페 CVR = 클릭당 비용. 실측 관측 범위(290~3,322원, n=84)를 벗어나면 경고
+          <br>※ 상페 CVR은 CAC에 이미 반영돼 있어 매출 계산에는 쓰이지 않습니다(중복). 검산 전용입니다.</li>
+        <li><b>정원 병목 표시</b>: 결제자가 수용 인원에 잘리면 "매출이 고정됐다"고 알림. 그 경계 CAC도 함께 표시</li>
+        <li>손익분기 인원이 수용 인원을 넘으면 <b>"이 구조로는 도달 불가"</b> 표시 (이전에는 정원을 무시하고 표시)</li>
+      </ul>
+      <h4>내부</h4>
+      <ul>
+        <li>계산식을 <code>js/sim-model.js</code> 단일 원본으로 분리 (index.html·index-v2.html 두 곳 복제 해소)</li>
+        <li>골든 마스터 회귀 테스트 21건 추가 — 기존 계산 결과와 완전 동일함을 검증 (<code>npm test</code>)</li>
+      </ul>
       <h3>v2.0.0 — 2026-05-13</h3>
       <h4>인프라</h4>
       <ul>
@@ -1027,13 +1055,14 @@
 
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/sim-model.js"></script>
 
 <script>
 // ===================== VERSION (단일 소스) =====================
 // 버전 숫자는 여기 한 곳에서만 관리한다. 헤더 배지가 이 값을 자동 표시.
 // 릴리즈 시: ①이 상수 ②아래 changelog 모달 최상단 <h3> ③CHANGELOG.md 최상단
 // 세 곳을 같은 버전으로 함께 올린다. (.github/workflows/version-sync.yml 이 일치 검사)
-const APP_VERSION = "v2.0.0";
+const APP_VERSION = "v2.2.0";
 document.getElementById("version-badge").textContent = APP_VERSION;
 
 // ===================== SUPABASE =====================
@@ -1148,6 +1177,52 @@ function deltaStr(actual, base, unit='만', lowerBetter=false) {
   return `<span class="${cls}">${sign}${fmt(diff, 1)}${unit} (${sign}${pct.toFixed(1)}%)</span>`;
 }
 
+// ===================== 입력 검산 · 병목 알림 =====================
+/* ② CAC × 상페CVR = 클릭당비용(CPC) 교차검증  ③ 정원 병목 표시
+   근거 수치는 js/sim-model.js의 BENCH (운영 콘솔 webinars 실측 n=84). */
+function simWarningsHTML(M) {
+  const B = M.bench, out = [];
+
+  // ③ 정원이 매출을 결정하고 있는가
+  if (M.capBound) {
+    out.push(`<div class="sim-warn">⚠️<div>
+      지금 목표 매출을 정하는 것은 CAC가 아니라 <b>수용 인원 ${fmt(M.cap,0)}명</b>입니다.
+      퍼널상 결제자는 ${fmt(M.rawBuyers,1)}명인데 정원에서 잘렸습니다.
+      ${M.cacAtCap != null ? `CAC가 <b>${fmt(M.cacAtCap,1)}천원</b> 아래인 동안에는 ` : ''}광고비·전환율을 더 개선해도
+      <b>매출은 ${fmt(M.gmv,0)}만원에 고정되고 비용만 늘어납니다.</b>
+    </div></div>`);
+  }
+
+  // ② CPC 교차검증
+  const c = M.cpcCheck;
+  if (c.status === 'too_low' || c.status === 'too_high') {
+    out.push(`<div class="sim-warn">🔎<div>
+      <b>CAC 입력값이 현실적인지 확인해 주세요.</b>
+      CAC ${fmt(M.cac,1)}천원 × 상페 CVR ${fmtPct(M.landingCvr*100)} =
+      클릭당 비용 <b>${fmt(c.impliedCpcKrw,0)}원</b>인데,
+      실측 관측 범위는 ${fmt(B.cpcMinKrw,0)}~${fmt(B.cpcMaxKrw,0)}원(중앙값 ${fmt(B.cpcMedianKrw,0)}원, n=${B.n})입니다.
+      ${c.status === 'too_low' ? '이보다 싼 클릭은 관측된 적이 없습니다 — CAC가 너무 낮게 잡혔을 수 있습니다.'
+                              : '이보다 비싼 클릭은 관측된 적이 없습니다 — CAC나 상페 CVR을 다시 확인해 주세요.'}
+    </div></div>`);
+  } else if (c.status === 'none') {
+    out.push(`<div class="sim-warn sim-warn-info">💡<div>
+      <b>상페 CVR은 매출 계산에 쓰이지 않습니다</b> — CAC(신청 1건당 비용)에 이미 반영돼 있기 때문입니다.
+      대신 입력하면 <b>CAC × 상페CVR = 클릭당 비용</b>으로 CAC 입력값이 현실적인지 검산해 드립니다.
+    </div></div>`);
+  }
+
+  // CAC 자체가 관측 범위 밖인가
+  if (M.cacStatus === 'too_low' || M.cacStatus === 'too_high') {
+    out.push(`<div class="sim-warn">📏<div>
+      CAC ${fmt(M.cac,1)}천원(= ${fmt(M.cac*1000,0)}원)은 실측 관측 범위
+      ${fmt(B.cacMinKrw,0)}~${fmt(B.cacMaxKrw,0)}원(중앙값 <b>${fmt(B.cacMedianKrw,0)}원</b>, n=${B.n})
+      ${M.cacStatus === 'too_low' ? '아래' : '위'}입니다.
+    </div></div>`);
+  }
+
+  return out.join('');
+}
+
 // ===================== SIMULATION CALC =====================
 function calcSim() {
   const price = v('s-price');
@@ -1163,31 +1238,34 @@ function calcSim() {
   const othercost = v('s-othercost');
   const landingCvr = v('s-landingcvr'); // 비교용 참고값, 계산에 영향 없음
 
-  const adReg = cac > 0 ? (adcost * 10) / cac : 0;
-  const totalReg = adReg + organic;
-  const attends = totalReg * attendRate;
-  const ftAttends = attends * ftRate;
-  const rawBuyers = ftAttends * cvr;
-  const buyers = cap > 0 ? Math.min(rawBuyers, cap) : rawBuyers;
-  const gmv = buyers * price;
-  const revenue = gmv / 1.1;
-  const pgFee = gmv * 0.035;
-  const feeAmt = revenue * fee;
-  const netProfit = revenue - adcost - othercost - pgFee;
-  const contribution = netProfit * fee;
-  const expectedSettlement = netProfit * (1 - fee);
-  const roas = adcost > 0 ? (revenue / adcost) * 100 : 0;
+  // 🔴 계산식의 단일 원본은 js/sim-model.js 다. 여기서 식을 복제하지 않는다.
+  //    (2026-08-25 이전에는 이 블록이 index.html·index-v2.html 두 곳에 손으로 복제돼 있었다)
+  const M = SimModel.computeSim({
+    price, cap, fee, adcost, cac, organic, othercost, attendRate, ftRate, cvr,
+    landingCvr: landingCvr / 100          // 화면은 %, 모델은 분수
+  });
+  const { adReg, totalReg, attends, ftAttends, rawBuyers, buyers,
+          gmv, revenue, pgFee, feeAmt, netProfit, contribution,
+          expectedSettlement, roas } = M;
 
-  simResult = { price, cap, fee, adcost, othercost, cac, landingCvr, organic, attendRate, ftRate, cvr,
-    adReg, totalReg, attends, ftAttends, buyers, gmv, revenue, pgFee, feeAmt, netProfit, contribution, expectedSettlement, roas };
+  // landingCvr만 화면 표기와 같은 % 단위로 되돌려 보관한다(저장된 시나리오 호환).
+  simResult = Object.assign({}, M, { landingCvr });
 
   // Funnel
+  // ① 각 단계에 "이 숫자가 어디서 나왔는지" 수식을 그대로 노출한다.
   document.getElementById('funnel-sim').innerHTML = funnelHTML([
-    { label:'광고신청', n: adReg, rate: null },
-    { label:'총신청', n: totalReg, rate: null },
-    { label:'참석', n: attends, rate: attendRate },
-    { label:'FT참석', n: ftAttends, rate: ftRate },
-    { label:'결제', n: buyers, rate: cvr },
+    { label:'광고신청', n: adReg, rate: null,
+      formula: `광고비 ${fmt(adcost,0)}만원 ÷ CAC ${fmt(cac,1)}천원` },
+    { label:'총신청', n: totalReg, rate: null,
+      formula: `광고 ${fmt(adReg,0)} + 오거닉 ${fmt(organic,0)}` },
+    { label:'참석', n: attends, rate: attendRate,
+      formula: `${fmt(totalReg,0)} × 참석률 ${fmtPct(attendRate*100)}` },
+    { label:'FT참석', n: ftAttends, rate: ftRate,
+      formula: `${fmt(attends,0)} × FT참석률 ${fmtPct(ftRate*100)}` },
+    { label:'결제', n: buyers, rate: cvr,
+      formula: M.capBound
+        ? `${fmt(rawBuyers,1)}명 → 정원 ${fmt(cap,0)}명으로 잘림`
+        : `${fmt(ftAttends,0)} × 결제CVR ${fmtPct(cvr*100)}` },
   ]);
 
   // Results — Waterfall
@@ -1196,6 +1274,7 @@ function calcSim() {
     ? `<span class="badge badge-green">흑자</span>`
     : `<span class="badge badge-red">적자</span>`;
   document.getElementById('result-sim').innerHTML = `
+    ${simWarningsHTML(M)}
     <!-- KPI 상단 3개 -->
     <div class="kpi-row">
       <div class="kpi-card kpi-primary">
@@ -1271,12 +1350,11 @@ function calcSim() {
     </div>
   `;
 
-  // Breakeven: netProfit = 0 → revenue = adcost + othercost + pgFee → gmv*(1/1.1 - 0.035) = adcost + othercost
-  const beDenom = (1 / 1.1 - 0.035);
-  const beGmv = beDenom > 0 ? (adcost + othercost) / beDenom : 0;
-  const beBuyers = price > 0 ? beGmv / price : 0;
+  // Breakeven — 계산은 SimModel이 한다. 🔴 정원(cap)을 넘으면 도달 불가임을 명시한다.
+  const { beGmv, beBuyers, beReachable } = M;
   document.getElementById('breakeven-sim').innerHTML = `
-    손익 분기 거래액: <b>${fmt(beGmv, 0)}만원</b> (약 ${fmt(beBuyers, 1)}명)<br>
+    손익 분기 거래액: <b>${fmt(beGmv, 0)}만원</b> (약 ${fmt(beBuyers, 1)}명)${
+      beReachable ? '' : ` <span class="badge badge-red">정원 ${fmt(cap,0)}명 초과 — 이 구조로는 도달 불가</span>`}<br>
     현재 예상: <b>${fmt(gmv, 0)}만원</b> &nbsp;${contribution >= 0 ? '<span class="badge badge-green">흑자</span>' : '<span class="badge badge-red">적자</span>'}<br>
     공헌이익률: <b>${fmtPct(netProfit > 0 ? contribution / netProfit * 100 : 0)}</b>
   `;
@@ -1451,6 +1529,7 @@ function funnelHTML(steps) {
         <label>${s.label}</label>
         <span class="num">${fmt(s.n, 0) === '-' ? '0' : fmt(s.n, 1)}</span>
         <span style="font-size:10px;color:var(--gray-500)">명</span>
+        ${s.formula ? `<span class="funnel-formula">${s.formula}</span>` : ''}
       </div>
     `;
   }).join('');
