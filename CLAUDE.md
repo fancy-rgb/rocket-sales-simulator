@@ -101,43 +101,38 @@
 
 ### 접근 제어 설계 (확정 — 2026-04-15)
 
-이 서비스는 **내부 전용**이다. 외부 접근을 허용할 이유가 없으므로 구글 로그인(Firebase Authentication)으로 접근을 제한한다.
+이 서비스는 **내부 전용**이다. 외부 접근을 허용할 이유가 없으므로 구글 로그인으로 접근을 제한한다.
+(v2.0.0 이후 Supabase Auth — 2026-09-29 이 절을 Firebase 기준에서 정정. 옛 Firebase 프로젝트는 더 이상 쓰지 않는다)
 
 **허용 도메인**
 - `@liveklass.com`
 - `@futureschole.com`
+- 강제 위치: DB 트리거 `enforce_allowed_email_domain` + 피드백 함수(`supabase/functions/feedback`)
 
 **차단 목록 관리 방식**
-- 앱 내 관리 UI 없음 — Firebase 콘솔에서 직접 관리
+- 앱 내 관리 UI 없음 — Supabase 관리 화면에서 직접 관리
 - 이유: 퇴사자 처리는 연 1~3회 수준이므로 별도 UI를 만드는 것은 유지 비용이 더 크다
 
 ---
 
 ### 퇴사자 접근 차단 절차
 
-팀원이 퇴사하면 아래 절차를 따른다.
+1. Supabase 관리 화면 → 프로젝트 **rocket-launch-simulator** 선택
+2. 좌측 **Table Editor** → `blocked_users` 표
+3. **Insert row** → `email` 칸에 퇴사자 이메일 입력 → 저장
+4. 즉시 적용 — 시나리오 조회·저장(보안 규칙의 `is_blocked()`)과 피드백 전송이 막힌다
 
-1. [console.firebase.google.com](https://console.firebase.google.com) 접속
-2. 프로젝트 `rocket-simulator-f988e` 선택
-3. 좌측 메뉴 → **Firestore Database**
-4. `blocked_users` 컬렉션 → **문서 추가**
-5. 필드 입력:
-   - 필드명: `email`
-   - 값: 퇴사자 이메일 주소 (예: `hong@liveklass.com`)
-6. 저장 → 즉시 적용 (해당 계정은 다음 접속 시 자동 차단)
-
-> Firebase 콘솔 접근 권한이 없으면 개발자(태윤)에게 요청한다.
+> 관리 화면 접근 권한이 없으면 셀 리드에게 요청한다.
 
 ---
 
 ### 관리자 추가/제거 절차
 
-1. Firebase 콘솔 → `rocket-simulator-f988e` → **Firestore Database**
-2. `admins` 컬렉션 선택
-3. **추가**: `+ 문서 추가` → 문서 ID = 이메일 주소, 필드 `email` = 이메일 주소
-4. **제거**: 해당 문서 선택 → 삭제
+1. Supabase 관리 화면 → **rocket-launch-simulator** → Table Editor → `admins` 표
+2. **추가**: Insert row → `email` = 이메일 주소
+3. **제거**: 해당 행 삭제
 
-즉시 적용 (다음 로그인 시 반영).
+즉시 적용 (`is_admin()` 판정).
 
 ---
 
@@ -201,7 +196,7 @@ grep -m1 '^## \[v' CHANGELOG.md                            # CHANGELOG 최상단
 - [ ] 일반 계정 로그인 → 삭제 버튼 없음 확인
 
 ### 소프트 삭제
-- [ ] 시나리오 삭제 후 Firebase 콘솔에서 해당 문서에 `deleted: true`, `deletedBy`, `deletedAt` 필드 확인
+- [ ] 시나리오 삭제 후 Supabase Table Editor에서 해당 행의 삭제 표시(`deleted` 등) 확인
 - [ ] 삭제된 시나리오가 목록에서 제외되는지 확인
 
 ### 로딩
